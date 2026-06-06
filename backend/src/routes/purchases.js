@@ -1,0 +1,61 @@
+import express from 'express';
+import Purchase from '../models/Purchase.js';
+import { auth } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
+import { verifyPatientAccess } from '../utils/patientAccess.js';
+import { parseBill } from '../services/aiService.js';
+import { updateInventoryFromPurchase } from '../services/inventoryService.js';
+
+const router = express.Router();
+router.use(auth);
+
+router.get('/patient/:patientId', async (req, res) => {
+  try {
+    const patient = await verifyPatientAccess(req.user._id, req.params.patientId, req.user.role);
+    if (!patient) return res.status(404).json({ message: 'Patient not found' });
+
+    const purchases = await Purchase.find({ patientId: req.params.patientId }).sort({ purchaseDate: -1 });
+    res.json(purchases);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const { patientId, rawText, manualEntry } = req.body;
+
+    const patient = await verifyPatientAccess(req.user._id, patientId, req.user.role);
+    if (!patient) return res.status(404).json({ message: 'Patient not found' });
+
+    const textInput = rawText || manualEntry || 'Pharmacy bill with medicine quantities';
+    let extracted;
+
+    try {
+      extracted = await parseBill(textInput);
+    } catch (aiErr) {
+      return res.status(422).json({ message: `AI parsing failed: ${aiErr.message}` });
+    }
+
+    const purchase = await Purchase.create({
+      patientId,
+      billFile: req.file ? `/uploads/${req.file.filename}` : undefined,
+      pharmacy: extracted.pharmacy,
+      purchaseDate: extracted.purchaseDate ? new Date(extracted.purchaseDate) : new Date(),
+      items: extracted.items,
+      totalAmount: extracted.totalAmount,
+      aiExtracted: true,
+    });
+
+    const inventory = await updateInventoryFromPurchase(patientId, purchase);
+
+    const io = req.app.get('io');
+    io?.to(String(req.user._id)).emit('purchase:processed', { purchase, inventory });
+
+    res.status(201).json({ purchase, inventory });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+export default router;
