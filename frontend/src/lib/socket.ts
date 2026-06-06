@@ -20,9 +20,11 @@ export function connectSocket(userId: string, callbacks?: {
   });
 
   socket.on('notification', (notification: Notification) => {
-    toast(notification.title || 'New Notification', {
-      icon: '🔔',
-      duration: 5000,
+    const stockTypes = ['low_stock', 'out_of_stock', 'stock_report', 'refill_reminder'];
+    const isStockAlert = stockTypes.includes(notification.type);
+    toast(isStockAlert ? notification.message : (notification.title || 'New Notification'), {
+      icon: isStockAlert ? '⚠️' : '🔔',
+      duration: isStockAlert ? 8000 : 5000,
     });
     callbacks?.onNotification?.(notification);
   });

@@ -10,6 +10,101 @@ function daysLeft(item) {
   return item.dailyUsage > 0 ? Math.floor(item.availableQuantity / item.dailyUsage) : 0;
 }
 
+function formatTabletDetail(item) {
+  const name = item.medicineName;
+  return item.strength ? `${name} (${item.strength})` : name;
+}
+
+function formatDosageSchedule(item) {
+  const parts = [];
+  if (item.morning) parts.push(`${item.morning} morning`);
+  if (item.afternoon) parts.push(`${item.afternoon} afternoon`);
+  if (item.night) parts.push(`${item.night} night`);
+  return parts.length ? parts.join(', ') : null;
+}
+
+function isCaregiverContext(user, patient) {
+  return user?.role === 'caregiver' || (patient.relationship && !['self', 'caregiver'].includes(patient.relationship));
+}
+
+function buildLowStockAlert(patient, item, user) {
+  const tablet = formatTabletDetail(item);
+  const left = daysLeft(item);
+  const qty = item.availableQuantity ?? 0;
+  const schedule = formatDosageSchedule(item);
+  const caregiverCtx = isCaregiverContext(user, patient);
+
+  const detail = schedule
+    ? `${tablet} — ${qty} tablets left, ~${left} day(s) remaining. Dosage: ${schedule}.`
+    : `${tablet} — ${qty} tablets left, ~${left} day(s) remaining.`;
+
+  const message = caregiverCtx
+    ? `${patient.name}: ${detail} Please purchase a refill.`
+    : `${detail} Please purchase a refill.`;
+
+  const smsBody = caregiverCtx
+    ? `DoseWise Alert — Patient: ${patient.name}\nMedicine: ${tablet}\nStock: ${qty} tablets (~${left} day(s) left)\n${schedule ? `Dosage: ${schedule}\n` : ''}Please refill soon.`
+    : `DoseWise Alert: ${tablet} — ${qty} tablets (~${left} day(s) left). Please refill soon.`;
+
+  return {
+    title: caregiverCtx ? `Low Stock — ${patient.name}` : 'Low Stock Alert',
+    message,
+    smsBody,
+    metadata: {
+      inventoryId: item._id,
+      patientName: patient.name,
+      medicineName: item.medicineName,
+      strength: item.strength,
+      availableQuantity: qty,
+      daysLeft: left,
+      schedule,
+    },
+  };
+}
+
+function buildOutOfStockAlert(patient, item, user) {
+  const tablet = formatTabletDetail(item);
+  const schedule = formatDosageSchedule(item);
+  const caregiverCtx = isCaregiverContext(user, patient);
+
+  const detail = schedule
+    ? `${tablet} is OUT OF STOCK (0 tablets). Dosage: ${schedule}.`
+    : `${tablet} is OUT OF STOCK (0 tablets).`;
+
+  const message = caregiverCtx
+    ? `${patient.name}: ${detail} Please refill immediately.`
+    : `${detail} Please refill immediately.`;
+
+  const smsBody = caregiverCtx
+    ? `DoseWise URGENT — Patient: ${patient.name}\nMedicine: ${tablet}\nStatus: OUT OF STOCK (0 tablets)\n${schedule ? `Dosage: ${schedule}\n` : ''}Please refill immediately.`
+    : `DoseWise URGENT: ${tablet} is OUT OF STOCK. Please refill immediately.`;
+
+  return {
+    title: caregiverCtx ? `Out of Stock — ${patient.name}` : 'Out of Stock',
+    message,
+    smsBody,
+    metadata: {
+      inventoryId: item._id,
+      patientName: patient.name,
+      medicineName: item.medicineName,
+      strength: item.strength,
+      availableQuantity: 0,
+      schedule,
+    },
+  };
+}
+
+function formatReportLine(patient, item, user) {
+  const tablet = formatTabletDetail(item);
+  const caregiverCtx = isCaregiverContext(user, patient);
+  const prefix = caregiverCtx ? `${patient.name} — ` : '';
+
+  if (item.status === 'out_of_stock') {
+    return `${prefix}${tablet}: OUT OF STOCK (0 tablets)`;
+  }
+  return `${prefix}${tablet}: ${item.availableQuantity} tablets, ~${daysLeft(item)} day(s) left`;
+}
+
 async function createAndEmitAlert({ userId, patientId, type, title, message, metadata, io, phone, smsBody }) {
   const notification = await Notification.create({
     userId,
@@ -35,35 +130,34 @@ export async function handleStockStatusChange(item, prevStatus, io) {
 
   const user = await User.findById(patient.userId);
   const phone = resolveNotificationPhone(user, patient);
-  const left = daysLeft(item);
 
   if (item.status === 'low_stock' && prevStatus !== 'low_stock') {
-    const smsBody = `DoseWise Alert: ${patient.name}'s ${item.medicineName} will last only ${left} day(s). Please purchase a refill.`;
+    const alert = buildLowStockAlert(patient, item, user);
     await createAndEmitAlert({
       userId: patient.userId,
       patientId: item.patientId,
       type: 'low_stock',
-      title: 'Low Stock Alert',
-      message: `${item.medicineName} stock will last only ${left} more day(s). Please purchase a refill.`,
-      metadata: { inventoryId: item._id, daysLeft: left, smsPhone: phone },
+      title: alert.title,
+      message: alert.message,
+      metadata: { ...alert.metadata, smsPhone: phone },
       io,
       phone,
-      smsBody,
+      smsBody: alert.smsBody,
     });
   }
 
   if (item.status === 'out_of_stock' && prevStatus !== 'out_of_stock') {
-    const smsBody = `DoseWise URGENT: ${patient.name}'s ${item.medicineName} is OUT OF STOCK. Please refill immediately.`;
+    const alert = buildOutOfStockAlert(patient, item, user);
     await createAndEmitAlert({
       userId: patient.userId,
       patientId: item.patientId,
       type: 'out_of_stock',
-      title: 'Out of Stock',
-      message: `${item.medicineName} is out of stock. Please refill immediately.`,
-      metadata: { inventoryId: item._id, smsPhone: phone },
+      title: alert.title,
+      message: alert.message,
+      metadata: { ...alert.metadata, smsPhone: phone },
       io,
       phone,
-      smsBody,
+      smsBody: alert.smsBody,
     });
   }
 }
@@ -75,28 +169,55 @@ export async function runDailyStockReport(io) {
     const items = await Inventory.find({
       patientId: patient._id,
       status: { $in: ['low_stock', 'out_of_stock'] },
-    }).sort({ medicineName: 1 });
+    }).sort({ status: -1, medicineName: 1 });
 
     if (!items.length) continue;
 
     const user = await User.findById(patient.userId);
     const phone = resolveNotificationPhone(user, patient);
+    const caregiverCtx = isCaregiverContext(user, patient);
 
-    const lines = items.map((i) => {
-      if (i.status === 'out_of_stock') return `${i.medicineName}: OUT OF STOCK`;
-      return `${i.medicineName}: ${daysLeft(i)} day(s) left`;
-    });
+    const outOfStock = items.filter((i) => i.status === 'out_of_stock');
+    const lowStock = items.filter((i) => i.status === 'low_stock');
 
+    const lines = items.map((i) => formatReportLine(patient, i, user));
     const reportMessage = lines.join('; ');
-    const smsBody = `DoseWise Stock Report for ${patient.name}:\n${lines.join('\n')}\nPlease refill soon.`;
+
+    let smsBody = caregiverCtx
+      ? `DoseWise Stock Alert — ${patient.name}\n`
+      : `DoseWise Stock Report:\n`;
+
+    if (outOfStock.length) {
+      smsBody += `OUT OF STOCK:\n${outOfStock.map((i) => `• ${formatTabletDetail(i)} (0 tablets)`).join('\n')}\n`;
+    }
+    if (lowStock.length) {
+      smsBody += `LOW STOCK:\n${lowStock.map((i) => `• ${formatTabletDetail(i)} — ${i.availableQuantity} tablets, ~${daysLeft(i)} day(s)`).join('\n')}\n`;
+    }
+    smsBody += 'Please refill soon.';
 
     await createAndEmitAlert({
       userId: patient.userId,
       patientId: patient._id,
       type: 'stock_report',
-      title: 'Daily Stock Report',
+      title: caregiverCtx ? `Stock Alert — ${patient.name}` : 'Daily Stock Report',
       message: reportMessage,
-      metadata: { itemCount: items.length, items: items.map((i) => i._id), smsPhone: phone },
+      metadata: {
+        patientName: patient.name,
+        itemCount: items.length,
+        outOfStock: outOfStock.map((i) => ({
+          medicineName: i.medicineName,
+          strength: i.strength,
+          availableQuantity: i.availableQuantity,
+        })),
+        lowStock: lowStock.map((i) => ({
+          medicineName: i.medicineName,
+          strength: i.strength,
+          availableQuantity: i.availableQuantity,
+          daysLeft: daysLeft(i),
+        })),
+        items: items.map((i) => i._id),
+        smsPhone: phone,
+      },
       io,
       phone,
       smsBody,
@@ -138,7 +259,7 @@ export async function getStockReport(patientId) {
       .limit(30),
   ]);
 
-  const user = patient ? await User.findById(patient.userId).select('phone name') : null;
+  const user = patient ? await User.findById(patient.userId).select('phone name role') : null;
   const notifyPhone = resolveNotificationPhone(user, patient);
 
   const withDays = inventory.map((item) => ({

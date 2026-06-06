@@ -69,7 +69,7 @@ export function DashboardPage() {
             <AlertTriangle className="h-4 w-4" /> Stock Report
           </Link>
           <Link to="/assistant" className="btn-primary text-sm">
-            <Sparkles className="h-4 w-4" /> Ask AI
+            <Sparkles className="h-4 w-4" /> Ask Jego
           </Link>
         </div>
       </div>

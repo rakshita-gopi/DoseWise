@@ -192,11 +192,56 @@ Return ONLY valid JSON:
   return parseJsonFromAI(content) || { hasInteractions: false, interactions: [], summary: 'Unable to analyze' };
 }
 
+function buildInventoryTable(inventory = []) {
+  if (!inventory.length) return '';
+  const rows = inventory
+    .map((i) => `| ${i.name} | ${i.daysLeft ?? 'N/A'} |`)
+    .join('\n');
+  return `Medicine Inventory\n| Medicine | Days Left |\n${rows}`;
+}
+
+function normalizeJegoReply(reply, context) {
+  let text = String(reply || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*/g, '');
+
+  const hasInventory = context.inventory?.length > 0;
+  const mentionsInventory = /inventory|days?\s*left|tablets?\s*left|stock|refill|run\s*out/i.test(text);
+
+  if (hasInventory && mentionsInventory && !text.includes('| Medicine |')) {
+    const intro = text.split('\n')[0]?.trim() || 'Here is the current medicine inventory.';
+    const summary = text.includes('\n')
+      ? text
+          .split('\n')
+          .filter((l) => l.trim() && !l.includes('|') && !/^(TAB\.|CAP\.|CARCA)/i.test(l.trim()))
+          .slice(-2)
+          .join(' ')
+      : '';
+    text = `${intro}\n\n${buildInventoryTable(context.inventory)}${summary ? `\n\n${summary}` : ''}`;
+  }
+
+  return text.trim();
+}
+
 export async function healthAssistantChat(message, context) {
-  const systemPrompt = `You are DoseWise AI Health Assistant — a helpful, cautious medical information assistant.
-You help patients understand their medicines, dosages, and inventory.
+  const systemPrompt = `You are Jego — DoseWise's friendly health assistant.
+You help patients and caregivers understand medicines, dosages, and inventory.
+
 IMPORTANT: Never diagnose conditions. Always recommend consulting a doctor for medical decisions.
-Use the patient's context when answering:
+
+RESPONSE FORMAT (strict — follow every time):
+- Never use asterisks (*), hashtags (#), bullet symbols, or markdown bold/italic.
+- Never use numbered lists when listing 3 or more comparable items — use a pipe table instead.
+- Put a short plain-text intro sentence, then a clear section heading on its own line (e.g. "Medicine Inventory"), then a markdown pipe table:
+
+Medicine Inventory
+| Medicine | Days Left |
+| CARCA CR | 6 |
+| TAB.BRILINTA | 6 |
+
+- For two-column data use headers like: Medicine | Days Left, Medicine | Quantity, Medicine | Schedule, etc.
+- End with a brief plain-text summary paragraph (no asterisks).
+- Keep headings short and professional.
 
 Patient: ${context.patientName || 'Unknown'}
 Medical conditions: ${context.medicalConditions?.join(', ') || 'None listed'}
@@ -205,13 +250,15 @@ Current medicines: ${JSON.stringify(context.medicines || [])}
 Inventory: ${JSON.stringify(context.inventory || [])}
 Adherence rate: ${context.adherenceRate ?? 'N/A'}%`;
 
-  return callOpenRouter(
+  const raw = await callOpenRouter(
     [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: message },
     ],
     { temperature: 0.5 }
   );
+
+  return normalizeJegoReply(raw, context);
 }
 
 export async function predictRefill(inventoryItem) {

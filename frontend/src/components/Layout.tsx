@@ -27,15 +27,17 @@ type NavItem = {
   hideFor?: Array<'patient' | 'caregiver' | 'doctor' | 'admin'>;
 };
 
+const STOCK_ALERT_TYPES = ['low_stock', 'out_of_stock', 'stock_report', 'refill_reminder'];
+
 const allNavItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/reminders', icon: Bell, label: 'Reminders', hideFor: ['caregiver'] },
+  { to: '/reminders', icon: Bell, label: 'Reminders' },
   { to: '/prescriptions', icon: FileText, label: 'Prescriptions' },
   { to: '/inventory', icon: Pill, label: 'Inventory' },
   { to: '/purchases', icon: ShoppingBag, label: 'Purchases' },
   { to: '/reports', icon: FileBarChart, label: 'Reports' },
   { to: '/documents', icon: FolderOpen, label: 'Documents' },
-  { to: '/assistant', icon: MessageCircle, label: 'AI Assistant' },
+  { to: '/assistant', icon: MessageCircle, label: 'Jego' },
   { to: '/family', icon: Users, label: 'Family Profiles' },
   { to: '/caregiver', icon: UserCircle, label: 'Caregiver View', hideFor: ['patient'] },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
@@ -47,7 +49,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const role = user?.role || 'patient';
   const navItems = allNavItems.filter((item) => !item.hideFor?.includes(role));
-  const unread = notifications.filter((n) => n.status === 'unread' && n.type !== 'dose_reminder').length;
+  const unread = notifications.filter((n) => {
+    if (n.status !== 'unread') return false;
+    if (role === 'caregiver') return STOCK_ALERT_TYPES.includes(n.type);
+    return n.type !== 'dose_reminder';
+  }).length;
 
   const handleLogout = () => {
     logout();
@@ -77,7 +83,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label }) => {
+            const navLabel = to === '/reminders' && role === 'caregiver' ? 'Stock Alerts' : label;
+            return (
             <NavLink
               key={to}
               to={to}
@@ -92,14 +100,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
               }
             >
               <Icon className="h-4.5 w-4.5 shrink-0" />
-              {label}
+              {navLabel}
               {to === '/reminders' && unread > 0 && (
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                   {unread}
                 </span>
               )}
             </NavLink>
-          ))}
+          );
+          })}
         </nav>
 
         <div className="border-t border-slate-100 p-3 dark:border-slate-800">

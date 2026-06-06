@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
-import { Send, Sparkles, Bot } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { chatApi } from '../lib/services';
 import type { ChatMessage } from '../types';
 import { Button, Spinner, EmptyState } from '../components/ui';
+import { JegoMessage } from '../components/assistant/JegoMessage';
+import { JegoWelcome } from '../components/assistant/JegoWelcome';
 
 const suggestions = [
   'When should I take Metformin?',
@@ -48,7 +50,7 @@ export function AssistantPage() {
       const { data } = await chatApi.send(msg, activePatient?._id);
       setMessages((prev) => [...prev, data.reply]);
     } catch {
-      toast.error('AI assistant unavailable');
+      toast.error('Jego is unavailable right now');
     } finally {
       setLoading(false);
     }
@@ -64,42 +66,57 @@ export function AssistantPage() {
 
   return (
     <div className="animate-fade-in flex h-[calc(100vh-8rem)] flex-col">
-      <div className="mb-4">
-        <h1 className="page-title flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-brand-600 dark:text-brand-400" /> AI Health Assistant
-        </h1>
-        <p className="page-desc">
-          Ask about medicines, dosages, and inventory{activePatient ? ` for ${activePatient.name}` : ''}
-        </p>
+      <JegoWelcome />
+
+      <div className="mb-4 flex items-center gap-3">
+        <img src="/jego-mascot.png" alt="Jego" className="h-12 w-12 rounded-2xl object-contain" />
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-brand-600 dark:text-brand-400" /> Jego
+          </h1>
+          <p className="page-desc">
+            Ask about medicines, dosages, and inventory{activePatient ? ` for ${activePatient.name}` : ''}
+          </p>
+        </div>
       </div>
 
       <div className="card flex flex-1 flex-col overflow-hidden !p-0">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 ? (
             <EmptyState
-              icon={<Bot className="h-6 w-6" />}
-              title="How can I help?"
-              description="Ask me anything about your medicines and health records"
+              icon={<img src="/jego-mascot.png" alt="" className="h-10 w-10 object-contain" />}
+              title="Hey, I'm Jego!"
+              description="How can I help you today? Ask me anything about medicines and health records."
             />
           ) : (
             messages.map((m) => (
               <div key={m._id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                     m.role === 'user'
-                      ? 'bg-brand-600 text-white'
+                      ? 'bg-brand-600 text-sm text-white'
                       : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100'
                   }`}
                 >
-                  {m.role === 'assistant' && <Bot className="mb-1 h-4 w-4 text-brand-600" />}
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  {m.role === 'assistant' && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <img src="/jego-mascot.png" alt="Jego" className="h-6 w-6 rounded-lg object-contain" />
+                      <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">Jego</span>
+                    </div>
+                  )}
+                  {m.role === 'assistant' ? (
+                    <JegoMessage content={m.content} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm">{m.content}</p>
+                  )}
                 </div>
               </div>
             ))
           )}
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 dark:bg-slate-800">
+              <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-3 dark:bg-slate-800">
+                <img src="/jego-mascot.png" alt="" className="h-5 w-5 animate-pulse object-contain" />
                 <Spinner className="h-4 w-4" />
               </div>
             </div>
@@ -124,7 +141,7 @@ export function AssistantPage() {
         <div className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-700">
           <input
             className="input flex-1"
-            placeholder="Ask about your medicines..."
+            placeholder="Ask Jego about your medicines..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && send()}
@@ -136,7 +153,7 @@ export function AssistantPage() {
       </div>
 
       <p className="mt-2 text-center text-[10px] text-slate-400">
-        AI responses are informational only. Always consult your doctor for medical decisions.
+        Jego&apos;s responses are informational only. Always consult your doctor for medical decisions.
       </p>
     </div>
   );
