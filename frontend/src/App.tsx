@@ -14,6 +14,7 @@ import { AssistantPage } from './pages/AssistantPage';
 import { FamilyPage } from './pages/FamilyPage';
 import { CaregiverPage } from './pages/CaregiverPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ReportsPage } from './pages/ReportsPage';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/family" element={<FamilyPage />} />
           <Route path="/caregiver" element={<CaregiverPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

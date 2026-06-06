@@ -17,6 +17,7 @@ import notificationRoutes from './routes/notifications.js';
 import documentRoutes from './routes/documents.js';
 import chatRoutes from './routes/chat.js';
 import caregiverRoutes from './routes/caregiver.js';
+import reportRoutes from './routes/reports.js';
 import { startCronJobs } from './services/cronJobs.js';
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/caregiver', caregiverRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

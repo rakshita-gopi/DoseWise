@@ -1,28 +1,12 @@
 import Inventory from '../models/Inventory.js';
-import Notification from '../models/Notification.js';
 import DoseLog from '../models/DoseLog.js';
 import Patient from '../models/Patient.js';
 import { predictRefill } from './aiService.js';
+import { LOW_STOCK_DAYS_THRESHOLD } from '../config/constants.js';
+import { handleStockStatusChange } from './stockAlertService.js';
+import { calcDailyUsage, calcExhaustionDate, getInventoryStatus } from './inventoryCalc.js';
 
-export function calcDailyUsage(morning = 0, afternoon = 0, night = 0) {
-  return morning + afternoon + night;
-}
-
-export function calcExhaustionDate(quantity, dailyUsage) {
-  if (!dailyUsage || dailyUsage <= 0) return null;
-  const days = Math.floor(quantity / dailyUsage);
-  return new Date(Date.now() + days * 86400000);
-}
-
-export function getInventoryStatus(quantity, dailyUsage, expiryDate, thresholdDays = 7) {
-  if (expiryDate && new Date(expiryDate) < new Date()) return 'expired';
-  if (quantity <= 0) return 'out_of_stock';
-  if (dailyUsage > 0) {
-    const daysLeft = quantity / dailyUsage;
-    if (daysLeft <= thresholdDays) return 'low_stock';
-  }
-  return 'active';
-}
+export { calcDailyUsage, calcExhaustionDate, getInventoryStatus };
 
 export async function syncInventoryFromPrescription(patientId, prescription) {
   const results = [];
@@ -44,7 +28,13 @@ export async function syncInventoryFromPrescription(patientId, prescription) {
       item.strength = med.strength;
       item.prescriptionId = prescription._id;
       item.exhaustionDate = calcExhaustionDate(item.availableQuantity, dailyUsage);
-      item.status = getInventoryStatus(item.availableQuantity, dailyUsage, item.expiryDate);
+      item.lowStockThreshold = item.lowStockThreshold ?? LOW_STOCK_DAYS_THRESHOLD;
+      item.status = getInventoryStatus(
+        item.availableQuantity,
+        dailyUsage,
+        item.expiryDate,
+        item.lowStockThreshold
+      );
     } else {
       item = await Inventory.create({
         patientId,
@@ -57,6 +47,7 @@ export async function syncInventoryFromPrescription(patientId, prescription) {
         dailyUsage,
         foodType: med.foodType,
         availableQuantity: 0,
+        lowStockThreshold: LOW_STOCK_DAYS_THRESHOLD,
         exhaustionDate: null,
         status: 'out_of_stock',
       });
@@ -70,7 +61,7 @@ export async function syncInventoryFromPrescription(patientId, prescription) {
   return results;
 }
 
-export async function updateInventoryFromPurchase(patientId, purchase) {
+export async function updateInventoryFromPurchase(patientId, purchase, io) {
   const results = [];
 
   for (const purchaseItem of purchase.items) {
@@ -97,14 +88,16 @@ export async function updateInventoryFromPurchase(patientId, purchase) {
       });
     }
 
+    const prevStatus = item.status;
     item.exhaustionDate = calcExhaustionDate(item.availableQuantity, item.dailyUsage);
     item.status = getInventoryStatus(
       item.availableQuantity,
       item.dailyUsage,
       item.expiryDate,
-      item.lowStockThreshold
+      item.lowStockThreshold ?? LOW_STOCK_DAYS_THRESHOLD
     );
     await item.save();
+    await handleStockStatusChange(item, prevStatus, io);
     results.push(item);
   }
 
@@ -129,36 +122,8 @@ export async function runDailyConsumption(io) {
     const patient = await Patient.findById(item.patientId);
     if (!patient) continue;
 
-    const userId = patient.userId;
-    const daysLeft = item.dailyUsage > 0 ? Math.floor(item.availableQuantity / item.dailyUsage) : 0;
-
-    if (item.status === 'low_stock' && prevStatus !== 'low_stock') {
-      const notification = await Notification.create({
-        userId,
-        patientId: item.patientId,
-        type: 'low_stock',
-        title: 'Low Stock Alert',
-        message: `Your ${item.medicineName} stock will last only ${daysLeft} more days. Please purchase a refill.`,
-        metadata: { inventoryId: item._id, daysLeft },
-      });
-
-      io?.to(String(userId)).emit('notification', notification);
-    }
-
-    if (item.availableQuantity === 0 && prevStatus !== 'out_of_stock') {
-      const notification = await Notification.create({
-        userId,
-        patientId: item.patientId,
-        type: 'refill_reminder',
-        title: 'Out of Stock',
-        message: `${item.medicineName} is out of stock. Please refill immediately.`,
-        metadata: { inventoryId: item._id },
-      });
-
-      io?.to(String(userId)).emit('notification', notification);
-    }
-
-    io?.to(String(userId)).emit('inventory:update', item);
+    await handleStockStatusChange(item, prevStatus, io);
+    io?.to(String(patient.userId)).emit('inventory:update', item);
   }
 }
 

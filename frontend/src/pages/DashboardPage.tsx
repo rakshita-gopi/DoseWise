@@ -65,6 +65,9 @@ export function DashboardPage() {
           <Link to="/prescriptions" className="btn-secondary text-sm">
             <Plus className="h-4 w-4" /> Upload Rx
           </Link>
+          <Link to="/reports" className="btn-secondary text-sm">
+            <AlertTriangle className="h-4 w-4" /> Stock Report
+          </Link>
           <Link to="/assistant" className="btn-primary text-sm">
             <Sparkles className="h-4 w-4" /> Ask AI
           </Link>

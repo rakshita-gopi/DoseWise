@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Heart, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { caregiverApi, inventoryApi, doseApi } from '../lib/services';
+import { caregiverApi } from '../lib/services';
 import { Card, Spinner, EmptyState } from '../components/ui';
 
 interface MonitoredPatient {
@@ -15,52 +16,28 @@ interface MonitoredPatient {
 }
 
 export function CaregiverPage() {
-  const { user, patients } = useAuth();
+  const { user } = useAuth();
   const [monitored, setMonitored] = useState<MonitoredPatient[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user?.role === 'patient') return;
+
     async function load() {
       setLoading(true);
       try {
-        if (user?.role === 'caregiver' || user?.role === 'doctor') {
-          const { data } = await caregiverApi.patients();
-          setMonitored(
-            data.map((p: Record<string, unknown>) => ({
-              _id: p._id as string,
-              name: p.name as string,
-              relationship: p.relationship as string,
-              adherenceRate: (p.adherence as { adherenceRate?: number })?.adherenceRate ?? 0,
-              totalMedicines: (p.inventorySummary as { total?: number })?.total ?? 0,
-              lowStock: (p.inventorySummary as { lowStock?: number })?.lowStock ?? 0,
-              missed: (p.adherence as { missed?: number })?.missed ?? 0,
-            }))
-          );
-        } else {
-          const family = patients.filter((p) => !p.isPrimary);
-          const enriched = await Promise.all(
-            family.map(async (p) => {
-              try {
-                const [dash, adherence] = await Promise.all([
-                  inventoryApi.dashboard(p._id),
-                  doseApi.adherence(p._id),
-                ]);
-                return {
-                  _id: p._id,
-                  name: p.name,
-                  relationship: p.relationship,
-                  adherenceRate: adherence.data.adherenceRate,
-                  totalMedicines: dash.data.summary.totalMedicines,
-                  lowStock: dash.data.summary.lowStockCount,
-                  missed: adherence.data.missed,
-                };
-              } catch {
-                return { _id: p._id, name: p.name, relationship: p.relationship, adherenceRate: 0, totalMedicines: 0, lowStock: 0, missed: 0 };
-              }
-            })
-          );
-          setMonitored(enriched);
-        }
+        const { data } = await caregiverApi.patients();
+        setMonitored(
+          data.map((p: Record<string, unknown>) => ({
+            _id: p._id as string,
+            name: p.name as string,
+            relationship: p.relationship as string,
+            adherenceRate: (p.adherence as { adherenceRate?: number })?.adherenceRate ?? 0,
+            totalMedicines: (p.inventorySummary as { total?: number })?.total ?? 0,
+            lowStock: (p.inventorySummary as { lowStock?: number })?.lowStock ?? 0,
+            missed: (p.adherence as { missed?: number })?.missed ?? 0,
+          }))
+        );
       } catch {
         setMonitored([]);
       } finally {
@@ -68,7 +45,11 @@ export function CaregiverPage() {
       }
     }
     load();
-  }, [user, patients]);
+  }, [user]);
+
+  if (user?.role === 'patient') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="animate-fade-in space-y-6">

@@ -49,9 +49,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       aiExtracted: true,
     });
 
-    const inventory = await updateInventoryFromPurchase(patientId, purchase);
-
     const io = req.app.get('io');
+    const inventory = await updateInventoryFromPurchase(patientId, purchase, io);
     io?.to(String(req.user._id)).emit('purchase:processed', { purchase, inventory });
 
     res.status(201).json({ purchase, inventory });

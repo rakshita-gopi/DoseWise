@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Bell, Check, X, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -9,18 +10,22 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { formatDate } from '../lib/utils';
 
 export function RemindersPage() {
-  const { activePatient, notifications, refreshNotifications } = useAuth();
+  const { user, activePatient, notifications, refreshNotifications } = useAuth();
   const [doses, setDoses] = useState<DoseLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!activePatient) return;
+    if (!activePatient || user?.role === 'caregiver') return;
     setLoading(true);
     inventoryApi
       .reminders(activePatient._id)
       .then(({ data }) => setDoses(data))
       .finally(() => setLoading(false));
-  }, [activePatient]);
+  }, [activePatient, user?.role]);
+
+  if (user?.role === 'caregiver') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const updateDose = async (id: string, status: string) => {
     try {

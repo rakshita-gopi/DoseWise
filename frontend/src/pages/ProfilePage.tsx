@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { UserCircle } from 'lucide-react';
+import { Phone, UserCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { patientApi } from '../lib/services';
+import { authApi, patientApi } from '../lib/services';
 import { Card, Button, Input, Label, Spinner } from '../components/ui';
 
 export function ProfilePage() {
-  const { activePatient, refreshPatients } = useAuth();
+  const { user, activePatient, refreshPatients, refreshUser } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [accountPhone, setAccountPhone] = useState(user?.phone || '');
   const [form, setForm] = useState({
     name: activePatient?.name || '',
     age: activePatient?.age?.toString() || '',
@@ -60,6 +62,44 @@ export function ProfilePage() {
           <p className="page-desc">Manage health information for {activePatient.name}</p>
         </div>
       </div>
+
+      <Card>
+        <h2 className="section-title mb-1 flex items-center gap-2">
+          <Phone className="h-4 w-4" /> Mobile Notifications
+        </h2>
+        <p className="muted mb-4 text-sm">
+          Stock alerts and daily reports are sent to this number via SMS.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSavingPhone(true);
+            try {
+              await authApi.updateProfile({ phone: accountPhone });
+              await refreshUser();
+              toast.success('Mobile number saved!');
+            } catch {
+              toast.error('Failed to save mobile number');
+            } finally {
+              setSavingPhone(false);
+            }
+          }}
+          className="flex flex-wrap items-end gap-3"
+        >
+          <div className="min-w-[200px] flex-1">
+            <Label>Your Mobile Number</Label>
+            <Input
+              value={accountPhone}
+              onChange={(e) => setAccountPhone(e.target.value)}
+              placeholder="e.g. 9876543210"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={savingPhone}>
+            {savingPhone ? <Spinner /> : 'Save Number'}
+          </Button>
+        </form>
+      </Card>
 
       <Card>
         <form onSubmit={handleSave} className="space-y-4">

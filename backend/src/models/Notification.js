@@ -8,7 +8,9 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         'low_stock',
+        'out_of_stock',
         'refill_reminder',
+        'stock_report',
         'dose_reminder',
         'prescription_expiry',
         'drug_interaction',

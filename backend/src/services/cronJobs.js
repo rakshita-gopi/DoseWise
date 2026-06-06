@@ -2,9 +2,17 @@ import cron from 'node-cron';
 import Prescription from '../models/Prescription.js';
 import Notification from '../models/Notification.js';
 import Patient from '../models/Patient.js';
+import User from '../models/User.js';
 import { runDailyConsumption } from './inventoryService.js';
+import { runDailyStockReport, migrateLowStockThresholds } from './stockAlertService.js';
 
-export function startCronJobs(io) {
+export async function startCronJobs(io) {
+  try {
+    await migrateLowStockThresholds();
+  } catch (err) {
+    console.error('[Cron] Low stock threshold migration failed:', err.message);
+  }
+
   // Daily consumption at midnight
   cron.schedule('0 0 * * *', async () => {
     console.log('[Cron] Running daily consumption engine...');
@@ -15,8 +23,18 @@ export function startCronJobs(io) {
     }
   });
 
-  // Prescription expiry check at 9 AM
+  // Daily stock report + SMS at 9 AM
   cron.schedule('0 9 * * *', async () => {
+    console.log('[Cron] Running daily stock report...');
+    try {
+      await runDailyStockReport(io);
+    } catch (err) {
+      console.error('[Cron] Daily stock report failed:', err.message);
+    }
+  });
+
+  // Prescription expiry check at 9:30 AM
+  cron.schedule('30 9 * * *', async () => {
     console.log('[Cron] Checking prescription expiry...');
     try {
       const fiveDaysFromNow = new Date(Date.now() + 5 * 86400000);
@@ -54,8 +72,13 @@ export function startCronJobs(io) {
       console.log(`[Cron] Sending ${slot} dose reminders...`);
 
       try {
+        const caregiverIds = new Set(
+          (await User.find({ role: 'caregiver' }).select('_id')).map((u) => String(u._id))
+        );
         const patients = await Patient.find({});
         for (const patient of patients) {
+          if (caregiverIds.has(String(patient.userId)) || patient.relationship === 'caregiver') continue;
+
           const notification = await Notification.create({
             userId: patient.userId,
             patientId: patient._id,

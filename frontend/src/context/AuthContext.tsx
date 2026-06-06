@@ -17,6 +17,7 @@ interface AuthContextType {
   logout: () => void;
   refreshPatients: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -39,6 +40,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setActivePatient = useCallback((p: Patient | null) => {
     setActivePatientState(p);
     persistActivePatient(p);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const { data } = await authApi.me();
+      setUser(data.user);
+      localStorage.setItem('dosewise_user', JSON.stringify(data.user));
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const refreshNotifications = useCallback(async () => {
@@ -151,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         refreshPatients,
         refreshNotifications,
+        refreshUser,
       }}
     >
       {children}

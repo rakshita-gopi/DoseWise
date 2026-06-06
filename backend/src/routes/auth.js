@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
     const token = signToken(user);
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
       primaryPatientId: patient._id,
     });
   } catch (err) {
@@ -65,8 +65,29 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role },
       primaryPatientId: primaryPatient?._id,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.patch('/profile', auth, async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    if (name?.trim()) req.user.name = name.trim();
+    if (phone !== undefined) req.user.phone = phone?.trim() || undefined;
+    await req.user.save();
+
+    res.json({
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        phone: req.user.phone,
+        role: req.user.role,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

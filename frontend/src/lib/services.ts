@@ -7,6 +7,8 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post<{ token: string; user: User; primaryPatientId: string }>('/auth/login', data),
   me: () => api.get<{ user: User; primaryPatientId: string }>('/auth/me'),
+  updateProfile: (data: { name?: string; phone?: string }) =>
+    api.patch<{ user: User }>('/auth/profile', data),
 };
 
 export const patientApi = {
@@ -83,6 +85,29 @@ export const chatApi = {
   history: () => api.get<ChatMessage[]>('/chat/history'),
   send: (message: string, patientId?: string) =>
     api.post<{ reply: ChatMessage }>('/chat/message', { message, patientId }),
+};
+
+export type StockReportItem = InventoryItem & { daysRemaining: number };
+
+export interface StockReport {
+  generatedAt: string;
+  patient: { _id: string; name: string } | null;
+  notifyPhone: string | null;
+  summary: {
+    total: number;
+    lowStock: number;
+    outOfStock: number;
+    active: number;
+    expired: number;
+  };
+  lowStock: StockReportItem[];
+  outOfStock: StockReportItem[];
+  allItems: StockReportItem[];
+  alertHistory: Notification[];
+}
+
+export const reportApi = {
+  stock: (patientId: string) => api.get<StockReport>(`/reports/stock/${patientId}`),
 };
 
 export const caregiverApi = {

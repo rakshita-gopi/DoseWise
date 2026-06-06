@@ -24,7 +24,7 @@ export const emptyInventoryForm = (): InventoryFormData => ({
   night: 0,
   expiryDate: '',
   batchNumber: '',
-  lowStockThreshold: 7,
+  lowStockThreshold: 2,
 });
 
 export function itemToForm(item: InventoryItem): InventoryFormData {
@@ -37,7 +37,7 @@ export function itemToForm(item: InventoryItem): InventoryFormData {
     night: item.night,
     expiryDate: item.expiryDate ? item.expiryDate.split('T')[0] : '',
     batchNumber: item.batchNumber || '',
-    lowStockThreshold: item.lowStockThreshold ?? 7,
+    lowStockThreshold: item.lowStockThreshold ?? 2,
   };
 }
 

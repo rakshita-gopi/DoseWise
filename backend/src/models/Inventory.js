@@ -14,7 +14,7 @@ const inventorySchema = new mongoose.Schema(
     foodType: String,
     batchNumber: String,
     expiryDate: Date,
-    lowStockThreshold: { type: Number, default: 7 },
+    lowStockThreshold: { type: Number, default: 2 },
     exhaustionDate: Date,
     status: {
       type: String,

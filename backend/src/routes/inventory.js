@@ -10,6 +10,8 @@ import {
   getInventoryStatus,
 } from '../services/inventoryService.js';
 import { predictRefill } from '../services/aiService.js';
+import { LOW_STOCK_DAYS_THRESHOLD } from '../config/constants.js';
+import { handleStockStatusChange } from '../services/stockAlertService.js';
 
 const router = express.Router();
 router.use(auth);
@@ -73,12 +75,13 @@ router.post('/', async (req, res) => {
       foodType: foodType || 'any',
       batchNumber,
       expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-      lowStockThreshold: lowStockThreshold ?? 7,
+      lowStockThreshold: lowStockThreshold ?? LOW_STOCK_DAYS_THRESHOLD,
       exhaustionDate: calcExhaustionDate(qty, dailyUsage),
-      status: getInventoryStatus(qty, dailyUsage, expiryDate, lowStockThreshold ?? 7),
+      status: getInventoryStatus(qty, dailyUsage, expiryDate, lowStockThreshold ?? LOW_STOCK_DAYS_THRESHOLD),
     });
 
     const io = req.app.get('io');
+    await handleStockStatusChange(item, 'active', io);
     io?.to(String(req.user._id)).emit('inventory:update', item);
 
     res.status(201).json(item);
@@ -118,18 +121,21 @@ router.patch('/:id', async (req, res) => {
       if (req.body[key] !== undefined) item[key] = req.body[key];
     }
 
+    const prevStatus = item.status;
+
     item.dailyUsage = calcDailyUsage(item.morning, item.afternoon, item.night);
     item.exhaustionDate = calcExhaustionDate(item.availableQuantity, item.dailyUsage);
     item.status = getInventoryStatus(
       item.availableQuantity,
       item.dailyUsage,
       item.expiryDate,
-      item.lowStockThreshold
+      item.lowStockThreshold ?? LOW_STOCK_DAYS_THRESHOLD
     );
 
     await item.save();
 
     const io = req.app.get('io');
+    await handleStockStatusChange(item, prevStatus, io);
     io?.to(String(req.user._id)).emit('inventory:update', item);
 
     res.json(item);

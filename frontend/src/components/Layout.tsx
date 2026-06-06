@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Pill,
   FileText,
+  FileBarChart,
   ShoppingBag,
   Bell,
   FolderOpen,
@@ -19,16 +20,24 @@ import { cn } from '../lib/utils';
 import { ThemeToggle } from './ThemeToggle';
 import { PatientSwitcher, ActivePatientBanner } from './PatientSwitcher';
 
-const navItems = [
+type NavItem = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  hideFor?: Array<'patient' | 'caregiver' | 'doctor' | 'admin'>;
+};
+
+const allNavItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/reminders', icon: Bell, label: 'Reminders' },
+  { to: '/reminders', icon: Bell, label: 'Reminders', hideFor: ['caregiver'] },
   { to: '/prescriptions', icon: FileText, label: 'Prescriptions' },
   { to: '/inventory', icon: Pill, label: 'Inventory' },
   { to: '/purchases', icon: ShoppingBag, label: 'Purchases' },
+  { to: '/reports', icon: FileBarChart, label: 'Reports' },
   { to: '/documents', icon: FolderOpen, label: 'Documents' },
   { to: '/assistant', icon: MessageCircle, label: 'AI Assistant' },
   { to: '/family', icon: Users, label: 'Family Profiles' },
-  { to: '/caregiver', icon: UserCircle, label: 'Caregiver View' },
+  { to: '/caregiver', icon: UserCircle, label: 'Caregiver View', hideFor: ['patient'] },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
@@ -36,7 +45,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, notifications, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-  const unread = notifications.filter((n) => n.status === 'unread').length;
+  const role = user?.role || 'patient';
+  const navItems = allNavItems.filter((item) => !item.hideFor?.includes(role));
+  const unread = notifications.filter((n) => n.status === 'unread' && n.type !== 'dose_reminder').length;
 
   const handleLogout = () => {
     logout();
