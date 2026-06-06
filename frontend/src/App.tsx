@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
@@ -16,8 +17,9 @@ import { ProfilePage } from './pages/ProfilePage';
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
-      <Toaster position="top-right" toastOptions={{ className: 'text-sm' }} />
+      <Toaster position="top-right" toastOptions={{ className: 'text-sm !bg-white dark:!bg-surface-900 dark:!text-slate-100' }} />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -37,5 +39,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
+    </ThemeProvider>
   );
 }

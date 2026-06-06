@@ -3,7 +3,8 @@ import Purchase from '../models/Purchase.js';
 import { auth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { verifyPatientAccess } from '../utils/patientAccess.js';
-import { parseBill } from '../services/aiService.js';
+import { parseBillInput } from '../services/aiService.js';
+import { resolveUploadInput } from '../services/fileExtractionService.js';
 import { updateInventoryFromPurchase } from '../services/inventoryService.js';
 
 const router = express.Router();
@@ -28,11 +29,12 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const patient = await verifyPatientAccess(req.user._id, patientId, req.user.role);
     if (!patient) return res.status(404).json({ message: 'Patient not found' });
 
-    const textInput = rawText || manualEntry || 'Pharmacy bill with medicine quantities';
     let extracted;
+    let input;
 
     try {
-      extracted = await parseBill(textInput);
+      input = await resolveUploadInput({ rawText, manualEntry, file: req.file });
+      extracted = await parseBillInput(input);
     } catch (aiErr) {
       return res.status(422).json({ message: `AI parsing failed: ${aiErr.message}` });
     }

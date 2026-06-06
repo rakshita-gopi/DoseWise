@@ -55,17 +55,17 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function Badge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-700',
-    low_stock: 'bg-amber-100 text-amber-700',
-    out_of_stock: 'bg-red-100 text-red-700',
-    expired: 'bg-slate-100 text-slate-600',
-    taken: 'bg-emerald-100 text-emerald-700',
-    missed: 'bg-red-100 text-red-700',
-    skipped: 'bg-slate-100 text-slate-600',
-    pending: 'bg-brand-100 text-brand-700',
-    processed: 'bg-emerald-100 text-emerald-700',
-    unread: 'bg-brand-100 text-brand-700',
-    read: 'bg-slate-100 text-slate-500',
+    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+    low_stock: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+    out_of_stock: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+    expired: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+    taken: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+    missed: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+    skipped: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+    pending: 'bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
+    processed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+    unread: 'bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
+    read: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
   };
 
   const label = status.replace(/_/g, ' ');

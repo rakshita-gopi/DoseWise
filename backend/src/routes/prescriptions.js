@@ -4,7 +4,8 @@ import Inventory from '../models/Inventory.js';
 import { auth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { verifyPatientAccess } from '../utils/patientAccess.js';
-import { parsePrescription, checkDrugInteractions } from '../services/aiService.js';
+import { parsePrescriptionInput, checkDrugInteractions } from '../services/aiService.js';
+import { resolveUploadInput } from '../services/fileExtractionService.js';
 import { syncInventoryFromPrescription } from '../services/inventoryService.js';
 import Notification from '../models/Notification.js';
 
@@ -31,13 +32,16 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     if (!patient) return res.status(404).json({ message: 'Patient not found' });
 
     let extracted;
-    const textInput = rawText || manualEntry || 'Sample prescription with medicines listed';
+    let input;
 
     try {
-      extracted = await parsePrescription(textInput);
+      input = await resolveUploadInput({ rawText, manualEntry, file: req.file });
+      extracted = await parsePrescriptionInput(input);
     } catch (aiErr) {
       return res.status(422).json({ message: `AI parsing failed: ${aiErr.message}` });
     }
+
+    const textInput = input.text || `[Extracted from ${input.source || 'uploaded file'}]`;
 
     const existingMeds = await Inventory.find({ patientId }).distinct('medicineName');
     const newMeds = extracted.medicines.map((m) => m.medicineName);

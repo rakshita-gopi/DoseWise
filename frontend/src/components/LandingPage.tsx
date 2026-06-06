@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Pill, Shield, Sparkles, Clock, Users } from 'lucide-react';
 import { Button } from './ui';
+import { ThemeToggle } from './ThemeToggle';
 
 export function LandingPage() {
   return (
@@ -12,7 +13,8 @@ export function LandingPage() {
           </div>
           <span className="font-display text-xl font-bold">DoseWise</span>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link to="/login" className="btn-ghost text-white hover:bg-white/10">
             Sign In
           </Link>

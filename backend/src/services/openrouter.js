@@ -40,3 +40,23 @@ export function parseJsonFromAI(text) {
     return null;
   }
 }
+
+export async function callOpenRouterVision(systemPrompt, userText, imageBase64, mimeType, options = {}) {
+  const visionModel = options.model || process.env.OPENROUTER_VISION_MODEL || 'openai/gpt-4o-mini';
+
+  const userContent = [
+    { type: 'text', text: userText },
+    {
+      type: 'image_url',
+      image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+    },
+  ];
+
+  return callOpenRouter(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+    { ...options, model: visionModel, maxTokens: options.maxTokens ?? 4096 }
+  );
+}

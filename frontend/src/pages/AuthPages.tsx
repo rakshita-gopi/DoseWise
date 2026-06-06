@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../lib/services';
 import { Button, Input, Label, Spinner } from '../components/ui';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -47,9 +48,10 @@ export function LoginPage() {
         <p className="text-sm text-brand-200">© 2026 DoseWise Healthcare</p>
       </div>
 
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="relative flex flex-1 items-center justify-center p-6 dark:bg-surface-950">
+        <div className="absolute right-6 top-6"><ThemeToggle /></div>
         <form onSubmit={handleSubmit} className="w-full max-w-md animate-slide-up">
-          <h1 className="font-display text-2xl font-bold text-surface-900">Welcome back</h1>
+          <h1 className="font-display text-2xl font-bold text-surface-900 dark:text-white">Welcome back</h1>
           <p className="mt-1 text-sm text-slate-500">Sign in to your DoseWise account</p>
 
           <div className="mt-8 space-y-4">
@@ -102,13 +104,14 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-surface-50 p-6 dark:bg-surface-950">
+      <div className="absolute right-6 top-6"><ThemeToggle /></div>
       <form onSubmit={handleSubmit} className="w-full max-w-md animate-slide-up">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white">
             <Pill className="h-6 w-6" />
           </div>
-          <h1 className="font-display text-2xl font-bold">Create your account</h1>
+          <h1 className="font-display text-2xl font-bold dark:text-white">Create your account</h1>
           <p className="mt-1 text-sm text-slate-500">Join DoseWise — smart medicine management</p>
         </div>
 

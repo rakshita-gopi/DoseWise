@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, Upload, Sparkles, AlertTriangle } from 'lucide-react';
+import { FileText, Upload, Sparkles, AlertTriangle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { prescriptionApi } from '../lib/services';
@@ -14,6 +14,19 @@ export function PrescriptionsPage() {
   const [uploading, setUploading] = useState(false);
   const [manualText, setManualText] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handleFileSelect = (selected: File | null) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(selected);
+    if (selected && selected.type.startsWith('image/')) {
+      setPreviewUrl(URL.createObjectURL(selected));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
+  const clearFile = () => handleFileSelect(null);
 
   const load = () => {
     if (!activePatient) return;
@@ -41,7 +54,7 @@ export function PrescriptionsPage() {
         toast('Drug interaction detected! Check notifications.', { icon: '⚠️', duration: 6000 });
       }
       setManualText('');
-      setFile(null);
+      clearFile();
       load();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Upload failed';
@@ -56,8 +69,8 @@ export function PrescriptionsPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold">Prescriptions</h1>
-        <p className="text-sm text-slate-500">Upload prescriptions — AI extracts medicines automatically</p>
+        <h1 className="font-display text-2xl font-bold dark:text-white">Prescriptions</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Upload PDF or image — AI reads and extracts medicines automatically</p>
       </div>
 
       <Card>
@@ -71,16 +84,41 @@ export function PrescriptionsPage() {
             onChange={(e) => setManualText(e.target.value)}
             rows={4}
           />
+          {file && (
+            <div className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-800 dark:bg-brand-950/30">
+              <FileText className="h-5 w-5 shrink-0 text-brand-600 dark:text-brand-400" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{file.name}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {(file.size / 1024).toFixed(1)} KB · {file.type.includes('pdf') ? 'PDF (text + vision OCR)' : 'Image (vision OCR)'}
+                </p>
+              </div>
+              <button onClick={clearFile} className="text-slate-400 hover:text-red-500">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {previewUrl && (
+            <img src={previewUrl} alt="Prescription preview" className="max-h-48 rounded-xl border border-slate-200 object-contain dark:border-slate-700" />
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <label className="btn-secondary cursor-pointer">
               <Upload className="h-4 w-4" />
-              {file ? file.name : 'Upload PDF/Image'}
-              <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              {file ? 'Change File' : 'Upload PDF/Image'}
+              <input
+                type="file"
+                className="hidden"
+                accept="image/jpeg,image/png,image/webp,image/gif,.pdf,application/pdf"
+                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+              />
             </label>
             <Button onClick={handleUpload} disabled={uploading}>
-              {uploading ? <Spinner /> : <><Sparkles className="h-4 w-4" /> Process with AI</>}
+              {uploading ? <><Spinner /> Processing...</> : <><Sparkles className="h-4 w-4" /> Process with AI</>}
             </Button>
           </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Supports PDF prescriptions and photos (JPG, PNG, WEBP). Scanned PDFs use AI vision OCR.
+          </p>
         </div>
       </Card>
 

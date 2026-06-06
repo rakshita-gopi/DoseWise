@@ -1,4 +1,4 @@
-import { callOpenRouter, parseJsonFromAI } from './openrouter.js';
+import { callOpenRouter, callOpenRouterVision, parseJsonFromAI } from './openrouter.js';
 
 const PRESCRIPTION_PROMPT = `You are a medical prescription parser for DoseWise healthcare app.
 Extract structured medicine data from the prescription text or description provided.
@@ -24,6 +24,13 @@ Return ONLY valid JSON in this exact format:
 Parse dosage like "1 Morning + 1 Night" as morning:1, afternoon:0, night:1.
 If information is missing, use null or 0 as appropriate.`;
 
+function validatePrescriptionResult(parsed) {
+  if (!parsed?.medicines?.length) {
+    throw new Error('Could not extract medicines from prescription');
+  }
+  return parsed;
+}
+
 export async function parsePrescription(textOrDescription) {
   const content = await callOpenRouter([
     { role: 'system', content: PRESCRIPTION_PROMPT },
@@ -33,11 +40,29 @@ export async function parsePrescription(textOrDescription) {
     },
   ]);
 
-  const parsed = parseJsonFromAI(content);
-  if (!parsed?.medicines?.length) {
-    throw new Error('Could not extract medicines from prescription');
+  return validatePrescriptionResult(parseJsonFromAI(content));
+}
+
+export async function parsePrescriptionFromImage(imageBase64, mimeType, supplementalText) {
+  const hint = supplementalText ? `\n\nAdditional text extracted:\n${supplementalText}` : '';
+  const content = await callOpenRouterVision(
+    PRESCRIPTION_PROMPT,
+    `Read this prescription document image carefully. Extract all medicines, dosages, doctor name, hospital, and dates.${hint}\n\nReturn structured JSON only.`,
+    imageBase64,
+    mimeType
+  );
+
+  return validatePrescriptionResult(parseJsonFromAI(content));
+}
+
+export async function parsePrescriptionInput({ text, imageBase64, mimeType }) {
+  if (imageBase64) {
+    return parsePrescriptionFromImage(imageBase64, mimeType, text);
   }
-  return parsed;
+  if (text?.trim()) {
+    return parsePrescription(text);
+  }
+  throw new Error('No prescription content to parse');
 }
 
 const BILL_PROMPT = `You are a pharmacy bill parser for DoseWise healthcare app.
@@ -59,6 +84,13 @@ Return ONLY valid JSON:
   ]
 }`;
 
+function validateBillResult(parsed) {
+  if (!parsed?.items?.length) {
+    throw new Error('Could not extract items from bill');
+  }
+  return parsed;
+}
+
 export async function parseBill(textOrDescription) {
   const content = await callOpenRouter([
     { role: 'system', content: BILL_PROMPT },
@@ -68,11 +100,29 @@ export async function parseBill(textOrDescription) {
     },
   ]);
 
-  const parsed = parseJsonFromAI(content);
-  if (!parsed?.items?.length) {
-    throw new Error('Could not extract items from bill');
+  return validateBillResult(parseJsonFromAI(content));
+}
+
+export async function parseBillFromImage(imageBase64, mimeType, supplementalText) {
+  const hint = supplementalText ? `\n\nAdditional text extracted:\n${supplementalText}` : '';
+  const content = await callOpenRouterVision(
+    BILL_PROMPT,
+    `Read this pharmacy bill image carefully. Extract all medicine items, quantities, pharmacy name, and dates.${hint}\n\nReturn structured JSON only.`,
+    imageBase64,
+    mimeType
+  );
+
+  return validateBillResult(parseJsonFromAI(content));
+}
+
+export async function parseBillInput({ text, imageBase64, mimeType }) {
+  if (imageBase64) {
+    return parseBillFromImage(imageBase64, mimeType, text);
   }
-  return parsed;
+  if (text?.trim()) {
+    return parseBill(text);
+  }
+  throw new Error('No bill content to parse');
 }
 
 export async function checkDrugInteractions(existingMedicines, newMedicines) {

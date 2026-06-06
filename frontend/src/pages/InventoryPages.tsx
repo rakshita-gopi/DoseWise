@@ -135,7 +135,7 @@ export function PurchasesPage() {
           <label className="btn-secondary cursor-pointer">
             <Upload className="h-4 w-4" />
             {file ? file.name : 'Upload Bill'}
-            <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,image/gif,.pdf,application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           </label>
           <Button onClick={handleUpload} disabled={uploading}>
             {uploading ? <Spinner /> : 'Process Bill'}
