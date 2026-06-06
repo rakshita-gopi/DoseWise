@@ -1,30 +1,93 @@
 import { useEffect, useState } from 'react';
-import { Pill, Upload, Sparkles } from 'lucide-react';
+import { Pill, Upload, Sparkles, Pencil, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { inventoryApi, purchaseApi } from '../lib/services';
 import type { InventoryItem, Purchase } from '../types';
 import { Card, Badge, Button, Textarea, Spinner, EmptyState } from '../components/ui';
+import { PageHeader } from '../components/ui/PageHeader';
+import { InventoryEditor, itemToForm, type InventoryFormData } from '../components/inventory/InventoryEditor';
 import { formatDate, daysRemaining } from '../lib/utils';
 
 export function InventoryPage() {
   const { activePatient } = useAuth();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<InventoryFormData>(itemToForm({
+    _id: '', patientId: '', medicineName: '', availableQuantity: 0, dailyUsage: 0,
+    morning: 0, afternoon: 0, night: 0, status: 'active',
+  }));
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
     if (!activePatient) return;
     inventoryApi.list(activePatient._id).then(({ data }) => setInventory(data)).finally(() => setLoading(false));
-  }, [activePatient]);
+  };
+
+  useEffect(load, [activePatient]);
+
+  const openEdit = (item: InventoryItem) => {
+    setEditingId(item._id);
+    setFormData(itemToForm(item));
+    setEditorOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!editingId) return;
+    const item = inventory.find((i) => i._id === editingId);
+    if (!confirm(`Remove "${item?.medicineName || 'this medicine'}" from inventory?`)) return;
+
+    setDeleting(true);
+    try {
+      await inventoryApi.delete(editingId);
+      setInventory((prev) => prev.filter((i) => i._id !== editingId));
+      toast.success('Medicine removed from inventory');
+      setEditorOpen(false);
+    } catch {
+      toast.error('Failed to delete medicine');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteFromCard = async (item: InventoryItem) => {
+    if (!confirm(`Remove "${item.medicineName}" from inventory?`)) return;
+    try {
+      await inventoryApi.delete(item._id);
+      setInventory((prev) => prev.filter((i) => i._id !== item._id));
+      toast.success('Medicine removed');
+    } catch {
+      toast.error('Failed to delete medicine');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!editingId || !formData.medicineName.trim()) return;
+    setSaving(true);
+    try {
+      const { data } = await inventoryApi.update(editingId, {
+        ...formData,
+        expiryDate: formData.expiryDate || undefined,
+      });
+      setInventory((prev) => prev.map((i) => (i._id === editingId ? data : i)));
+      toast.success('Medicine updated!');
+      setEditorOpen(false);
+    } catch {
+      toast.error('Failed to update medicine');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!activePatient) return <EmptyState icon={<Pill />} title="No profile selected" />;
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Medicine Inventory</h1>
-        <p className="text-sm text-slate-500">Auto-tracked stock with daily consumption</p>
-      </div>
+    <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
+      <PageHeader title="Medicine Inventory" description="Auto-tracked stock with daily consumption" />
 
       {loading ? (
         <div className="flex justify-center py-12"><Spinner className="h-8 w-8" /></div>
@@ -32,42 +95,87 @@ export function InventoryPage() {
         <EmptyState icon={<Pill />} title="No medicines in inventory" description="Upload a prescription and bill to start tracking" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {inventory.map((item) => {
+          {inventory.map((item, i) => {
             const days = daysRemaining(item.availableQuantity, item.dailyUsage);
             return (
-              <Card key={item._id} className="relative overflow-hidden">
-                <div className="absolute right-0 top-0 h-1 w-full bg-gradient-to-r from-brand-500 to-brand-300" style={{ width: `${Math.min(100, (days ?? 30) * 3.33)}%` }} />
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold">{item.medicineName}</h3>
-                    <p className="text-xs text-slate-500">{item.strength}</p>
+              <motion.div
+                key={item._id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+              >
+                <Card className="group relative overflow-hidden">
+                  <div
+                    className="absolute left-0 top-0 h-1 bg-gradient-to-r from-brand-500 to-brand-400 transition-all"
+                    style={{ width: `${Math.min(100, (days ?? 30) * 3.33)}%` }}
+                  />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-slate-900 dark:text-slate-100">{item.medicineName}</h3>
+                      <p className="muted truncate text-xs">{item.strength}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <Badge status={item.status} />
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all hover:bg-slate-100 hover:text-brand-600 group-hover:opacity-100 dark:hover:bg-slate-800 dark:hover:text-brand-400"
+                        title="Edit medicine"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFromCard(item)}
+                        className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                        title="Delete medicine"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <Badge status={item.status} />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-lg bg-slate-50 p-2">
-                    <p className="text-xs text-slate-500">Stock</p>
-                    <p className="text-lg font-bold">{item.availableQuantity}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                    <div className="panel-stat">
+                      <p className="muted text-xs">Stock</p>
+                      <p className="stat-value">{item.availableQuantity}</p>
+                    </div>
+                    <div className="panel-stat">
+                      <p className="muted text-xs">Days Left</p>
+                      <p className="stat-value">{days ?? '—'}</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-slate-50 p-2">
-                    <p className="text-xs text-slate-500">Days Left</p>
-                    <p className="text-lg font-bold">{days ?? '—'}</p>
+                  <div className="muted mt-3 flex gap-2 text-xs">
+                    <span>🌅 {item.morning}</span>
+                    <span>☀️ {item.afternoon}</span>
+                    <span>🌙 {item.night}</span>
+                    <span className="ml-auto">Daily: {item.dailyUsage}</span>
                   </div>
-                </div>
-                <div className="mt-3 flex gap-2 text-xs text-slate-500">
-                  <span>🌅 {item.morning}</span>
-                  <span>☀️ {item.afternoon}</span>
-                  <span>🌙 {item.night}</span>
-                  <span className="ml-auto">Daily: {item.dailyUsage}</span>
-                </div>
-                {item.expiryDate && (
-                  <p className="mt-2 text-xs text-slate-400">Expires: {formatDate(item.expiryDate)}</p>
-                )}
-              </Card>
+                  {item.expiryDate && (
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Expires: {formatDate(item.expiryDate)}</p>
+                  )}
+                  <div className="mt-4 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button variant="secondary" size="sm" className="flex-1" onClick={() => openEdit(item)}>
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => handleDeleteFromCard(item)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
             );
           })}
         </div>
       )}
+
+      <InventoryEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        data={formData}
+        onChange={setFormData}
+        onSave={handleSave}
+        onDelete={handleDelete}
+        saving={saving}
+        deleting={deleting}
+      />
     </div>
   );
 }
@@ -115,18 +223,15 @@ export function PurchasesPage() {
   if (!activePatient) return <EmptyState icon={<Upload />} title="No profile selected" />;
 
   return (
-    <div className="animate-fade-in space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Pharmacy Bills</h1>
-        <p className="text-sm text-slate-500">Upload bills to auto-update inventory</p>
-      </div>
+    <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
+      <PageHeader title="Pharmacy Bills" description="Upload bills to auto-update inventory" />
 
       <Card>
-        <h2 className="mb-4 flex items-center gap-2 font-display font-semibold">
-          <Sparkles className="h-5 w-5 text-brand-600" /> AI Bill Reader
+        <h2 className="section-title mb-4 flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-brand-600 dark:text-brand-400" /> AI Bill Reader
         </h2>
         <Textarea
-          placeholder="Paste bill details, e.g.: Metformin 500mg x 60 tablets, Telmisartan 40mg x 30 tablets from Apollo Pharmacy..."
+          placeholder="Paste bill details, e.g.: Metformin 500mg x 60 tablets..."
           value={billText}
           onChange={(e) => setBillText(e.target.value)}
           rows={3}
@@ -152,16 +257,16 @@ export function PurchasesPage() {
           <Card key={p._id}>
             <div className="mb-3 flex justify-between">
               <div>
-                <h3 className="font-semibold">{p.pharmacy || 'Pharmacy'}</h3>
-                <p className="text-xs text-slate-500">{formatDate(p.purchaseDate)}</p>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{p.pharmacy || 'Pharmacy'}</h3>
+                <p className="muted text-xs">{formatDate(p.purchaseDate)}</p>
               </div>
-              {p.totalAmount && <p className="font-bold text-brand-600">₹{p.totalAmount}</p>}
+              {p.totalAmount && <p className="font-bold text-brand-600 dark:text-brand-400">₹{p.totalAmount}</p>}
             </div>
             <div className="space-y-1 text-sm">
               {p.items.map((item, i) => (
-                <div key={i} className="flex justify-between rounded-lg bg-slate-50 px-3 py-2">
-                  <span>{item.medicineName} {item.strength}</span>
-                  <span className="font-medium">×{item.quantity}</span>
+                <div key={i} className="panel flex justify-between">
+                  <span className="text-slate-700 dark:text-slate-300">{item.medicineName} {item.strength}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-100">×{item.quantity}</span>
                 </div>
               ))}
             </div>

@@ -177,8 +177,8 @@ export function PrescriptionsPage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold dark:text-white">Prescriptions</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="page-title">Prescriptions</h1>
+          <p className="page-desc">
             Upload, review, name and save your prescriptions
           </p>
         </div>
@@ -234,7 +234,7 @@ export function PrescriptionsPage() {
       </Card>
 
       <div>
-        <h2 className="mb-4 font-display text-lg font-semibold dark:text-white">
+        <h2 className="section-title mb-4">
           Saved Prescriptions ({prescriptions.length})
         </h2>
         {loading ? (

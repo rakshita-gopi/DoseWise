@@ -71,8 +71,8 @@ export function DocumentsPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold">Medical Document Vault</h1>
-        <p className="text-sm text-slate-500">Store prescriptions, lab reports, scans & insurance docs</p>
+        <h1 className="page-title">Medical Document Vault</h1>
+        <p className="page-desc">Store prescriptions, lab reports, scans & insurance docs</p>
       </div>
 
       <Card>

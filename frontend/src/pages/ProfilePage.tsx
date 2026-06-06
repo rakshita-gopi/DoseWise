@@ -56,8 +56,8 @@ export function ProfilePage() {
           {form.name.charAt(0) || <UserCircle className="h-8 w-8" />}
         </div>
         <div>
-          <h1 className="font-display text-2xl font-bold">Patient Profile</h1>
-          <p className="text-sm text-slate-500">Manage health information for {activePatient.name}</p>
+          <h1 className="page-title">Patient Profile</h1>
+          <p className="page-desc">Manage health information for {activePatient.name}</p>
         </div>
       </div>
 

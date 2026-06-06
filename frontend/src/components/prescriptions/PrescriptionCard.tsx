@@ -28,9 +28,9 @@ export function PrescriptionCard({ prescription, index, onClick }: PrescriptionC
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        'group relative w-full overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-card transition-shadow',
+        'group relative w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 text-left shadow-card transition-shadow',
         'hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/10',
-        'dark:border-slate-800 dark:bg-surface-900 dark:hover:border-brand-800'
+        'dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-800'
       )}
     >
       <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-brand-500/5 transition-transform group-hover:scale-150 dark:bg-brand-400/5" />
@@ -55,7 +55,7 @@ export function PrescriptionCard({ prescription, index, onClick }: PrescriptionC
       </div>
 
       <div className="relative mt-4 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-surface-800 dark:text-slate-300">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
           <Pill className="h-3 w-3" /> {medCount} medicines
         </span>
         <span className="rounded-lg bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
@@ -73,7 +73,7 @@ export function PrescriptionCard({ prescription, index, onClick }: PrescriptionC
         {prescription.medicines?.slice(0, 3).map((m, i) => (
           <span
             key={i}
-            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-surface-800 dark:text-slate-400"
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
           >
             {m.medicineName}
           </span>

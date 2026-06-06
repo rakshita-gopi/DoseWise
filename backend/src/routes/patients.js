@@ -18,10 +18,11 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    const isCaregiver = req.user.role === 'caregiver';
     const patient = await Patient.create({
       ...req.body,
       userId: req.user._id,
-      ownerId: req.body.relationship !== 'self' ? req.user._id : undefined,
+      ownerId: isCaregiver || (req.body.relationship && req.body.relationship !== 'self') ? req.user._id : undefined,
       isPrimary: false,
     });
     res.status(201).json(patient);

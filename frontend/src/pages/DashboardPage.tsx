@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Pill, AlertTriangle, TrendingUp, CheckCircle2, Plus, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { inventoryApi } from '../lib/services';
 import type { DashboardData } from '../types';
 import { Card, Badge, Spinner, EmptyState } from '../components/ui';
@@ -13,6 +14,8 @@ const PIE_COLORS = ['#10b981', '#ef4444', '#94a3b8'];
 
 export function DashboardPage() {
   const { activePatient, user } = useAuth();
+  const { theme } = useTheme();
+  const chartTick = theme === 'dark' ? '#94a3b8' : '#64748b';
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,10 +58,8 @@ export function DashboardPage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-500">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
-          <h1 className="font-display text-2xl font-bold text-surface-900">
-            {activePatient.name}&apos;s Health Dashboard
-          </h1>
+          <p className="page-desc">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
+          <h1 className="page-title">{activePatient.name}&apos;s Health Dashboard</h1>
         </div>
         <div className="flex gap-2">
           <Link to="/prescriptions" className="btn-secondary text-sm">
@@ -73,10 +74,10 @@ export function DashboardPage() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: 'Total Medicines', value: data.summary.totalMedicines, icon: Pill, color: 'text-brand-600 bg-brand-50' },
-          { label: 'Active', value: data.summary.activeMedicines, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
-          { label: 'Low Stock', value: data.summary.lowStockCount, icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
-          { label: 'Adherence', value: `${data.summary.adherenceRate}%`, icon: TrendingUp, color: 'text-violet-600 bg-violet-50' },
+          { label: 'Total Medicines', value: data.summary.totalMedicines, icon: Pill, color: 'icon-box-brand' },
+          { label: 'Active', value: data.summary.activeMedicines, icon: CheckCircle2, color: 'icon-box-emerald' },
+          { label: 'Low Stock', value: data.summary.lowStockCount, icon: AlertTriangle, color: 'icon-box-amber' },
+          { label: 'Adherence', value: `${data.summary.adherenceRate}%`, icon: TrendingUp, color: 'icon-box-violet' },
         ].map(({ label, value, icon: Icon, color }, i) => (
           <motion.div
             key={label}
@@ -85,12 +86,12 @@ export function DashboardPage() {
             transition={{ delay: i * 0.08, duration: 0.35 }}
           >
           <Card className="flex items-center gap-4">
-            <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${color}`}>
+            <div className={color}>
               <Icon className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-surface-900">{value}</p>
-              <p className="text-xs text-slate-500">{label}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
+              <p className="muted text-xs">{label}</p>
             </div>
           </Card>
           </motion.div>
@@ -100,13 +101,13 @@ export function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Stock Chart */}
         <Card>
-          <h2 className="mb-4 font-display font-semibold">Medicine Stock Levels</h2>
+          <h2 className="section-title mb-4">Medicine Stock Levels</h2>
           {stockChart.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stockChart}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: chartTick }} />
+                <YAxis tick={{ fontSize: 11, fill: chartTick }} />
+                <Tooltip contentStyle={{ background: theme === 'dark' ? '#1e293b' : '#fff', border: '1px solid #334155', borderRadius: 12, color: theme === 'dark' ? '#e2e8f0' : '#0f172a' }} />
                 <Bar dataKey="stock" fill="#0891b2" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -117,7 +118,7 @@ export function DashboardPage() {
 
         {/* Adherence */}
         <Card>
-          <h2 className="mb-4 font-display font-semibold">Dose Adherence (30 days)</h2>
+          <h2 className="section-title mb-4">Dose Adherence (30 days)</h2>
           {data.adherence.total > 0 ? (
             <div className="flex items-center gap-6">
               <ResponsiveContainer width="50%" height={180}>
@@ -130,10 +131,10 @@ export function DashboardPage() {
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="space-y-2 text-sm">
-                <p><span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 mr-2" />Taken: {data.adherence.taken}</p>
-                <p><span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 mr-2" />Missed: {data.adherence.missed}</p>
-                <p><span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-400 mr-2" />Skipped: {data.adherence.skipped}</p>
+              <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />Taken: {data.adherence.taken}</p>
+                <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500" />Missed: {data.adherence.missed}</p>
+                <p><span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-slate-400" />Skipped: {data.adherence.skipped}</p>
               </div>
             </div>
           ) : (
@@ -144,16 +145,16 @@ export function DashboardPage() {
 
       {/* Low Stock Alerts */}
       {data.lowStock.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50">
-          <h2 className="mb-3 flex items-center gap-2 font-display font-semibold text-amber-800">
+        <Card className="alert-warning">
+          <h2 className="mb-3 flex items-center gap-2 font-display font-semibold text-amber-800 dark:text-amber-300">
             <AlertTriangle className="h-5 w-5" /> Low Stock Alerts
           </h2>
           <div className="space-y-2">
             {data.lowStock.map((item) => (
-              <div key={item._id} className="flex items-center justify-between rounded-xl bg-white p-3">
+              <div key={item._id} className="panel flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{item.medicineName}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">{item.medicineName}</p>
+                  <p className="muted text-xs">
                     {item.availableQuantity} tablets left · {daysRemaining(item.availableQuantity, item.dailyUsage)} days remaining
                   </p>
                 </div>
@@ -166,11 +167,11 @@ export function DashboardPage() {
 
       {/* Refill Predictions */}
       <Card>
-        <h2 className="mb-4 font-display font-semibold">AI Refill Predictions</h2>
+        <h2 className="section-title mb-4">AI Refill Predictions</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-left text-slate-500">
+              <tr className="table-head">
                 <th className="pb-2 font-medium">Medicine</th>
                 <th className="pb-2 font-medium">Stock</th>
                 <th className="pb-2 font-medium">Days Left</th>
@@ -179,8 +180,8 @@ export function DashboardPage() {
             </thead>
             <tbody>
               {data.predictions.map((p) => (
-                <tr key={p.medicineName} className="border-b border-slate-50">
-                  <td className="py-3 font-medium">{p.medicineName}</td>
+                <tr key={p.medicineName} className="table-row">
+                  <td className="py-3 font-medium text-slate-900 dark:text-slate-100">{p.medicineName}</td>
                   <td className="py-3">{data.inventory.find((i) => i.medicineName === p.medicineName)?.availableQuantity ?? '—'}</td>
                   <td className="py-3">{p.daysRemaining ?? '—'}</td>
                   <td className="py-3">{formatDate(p.exhaustionDate)}</td>

@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
       userId: user._id,
       name,
       isPrimary: true,
-      relationship: 'self',
+      relationship: (role || 'patient') === 'caregiver' ? 'caregiver' : 'self',
     });
 
     const token = signToken(user);

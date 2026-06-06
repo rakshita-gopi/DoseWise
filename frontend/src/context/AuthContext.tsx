@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import type { User, Patient, Notification } from '../types';
 import { authApi, patientApi, notificationApi } from '../lib/services';
 import { connectSocket, disconnectSocket } from '../lib/socket';
+import { getDefaultActivePatient } from '../lib/patients';
+
+const ACTIVE_PATIENT_KEY = 'dosewise_active_patient';
 
 interface AuthContextType {
   user: User | null;
@@ -18,12 +21,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function persistActivePatient(patient: Patient | null) {
+  if (patient) {
+    localStorage.setItem(ACTIVE_PATIENT_KEY, patient._id);
+  } else {
+    localStorage.removeItem(ACTIVE_PATIENT_KEY);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [activePatient, setActivePatient] = useState<Patient | null>(null);
+  const [activePatient, setActivePatientState] = useState<Patient | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const setActivePatient = useCallback((p: Patient | null) => {
+    setActivePatientState(p);
+    persistActivePatient(p);
+  }, []);
 
   const refreshNotifications = useCallback(async () => {
     try {
@@ -37,12 +53,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshPatients = useCallback(async () => {
     try {
       const { data } = await patientApi.list();
+      const storedId = localStorage.getItem(ACTIVE_PATIENT_KEY);
+      const currentUser =
+        user || (JSON.parse(localStorage.getItem('dosewise_user') || 'null') as User | null);
       setPatients(data);
-      setActivePatient((prev) => prev || data.find((p) => p.isPrimary) || data[0] || null);
+      setActivePatientState((prev) => {
+        const next = getDefaultActivePatient(currentUser, data, prev?._id || storedId);
+        if (next) persistActivePatient(next);
+        return next;
+      });
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [user]);
 
   const login = useCallback(
     (token: string, u: User, primaryPatientId?: string) => {
@@ -54,23 +77,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onNotification: (n) => setNotifications((prev) => [n, ...prev]),
       });
 
-      refreshPatients().then(() => {
-        if (primaryPatientId) {
-          patientApi.get(primaryPatientId).then(({ data }) => setActivePatient(data)).catch(() => {});
+      patientApi.list().then(({ data }) => {
+        setPatients(data);
+        const storedId = localStorage.getItem(ACTIVE_PATIENT_KEY);
+        const active = getDefaultActivePatient(u, data, storedId || primaryPatientId);
+        if (active) {
+          setActivePatientState(active);
+          persistActivePatient(active);
+        } else if (primaryPatientId && u.role !== 'caregiver') {
+          patientApi.get(primaryPatientId).then(({ data: p }) => {
+            setActivePatientState(p);
+            persistActivePatient(p);
+          }).catch(() => {});
         }
       });
+
       refreshNotifications();
     },
-    [refreshPatients, refreshNotifications]
+    [refreshNotifications]
   );
 
   const logout = useCallback(() => {
     localStorage.removeItem('dosewise_token');
     localStorage.removeItem('dosewise_user');
+    localStorage.removeItem(ACTIVE_PATIENT_KEY);
     disconnectSocket();
     setUser(null);
     setPatients([]);
-    setActivePatient(null);
+    setActivePatientState(null);
     setNotifications([]);
   }, []);
 
@@ -86,14 +120,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           connectSocket(data.user.id, {
             onNotification: (n) => setNotifications((prev) => [n, ...prev]),
           });
-          return Promise.all([refreshPatients(), refreshNotifications()]);
+          return patientApi.list().then(({ data: patientList }) => {
+            setPatients(patientList);
+            const storedId = localStorage.getItem(ACTIVE_PATIENT_KEY);
+            const active = getDefaultActivePatient(data.user, patientList, storedId || data.primaryPatientId);
+            if (active) {
+              setActivePatientState(active);
+              persistActivePatient(active);
+            }
+            return refreshNotifications();
+          });
         })
         .catch(() => logout())
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
-  }, [logout, refreshPatients, refreshNotifications]);
+  }, [logout, refreshNotifications]);
 
   return (
     <AuthContext.Provider

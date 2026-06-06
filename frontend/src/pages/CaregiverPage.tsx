@@ -73,8 +73,8 @@ export function CaregiverPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold">Caregiver Dashboard</h1>
-        <p className="text-sm text-slate-500">Monitor medicines, adherence & stock for your loved ones</p>
+        <h1 className="page-title">Caregiver Dashboard</h1>
+        <p className="page-desc">Monitor medicines, adherence & stock for your loved ones</p>
       </div>
 
       {loading ? (
@@ -90,26 +90,26 @@ export function CaregiverPage() {
                   {p.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-semibold">{p.name}</h3>
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</h3>
                   <p className="text-xs capitalize text-slate-500">{p.relationship}</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl bg-emerald-50 p-3">
-                  <p className="text-lg font-bold text-emerald-700">{p.adherenceRate}%</p>
-                  <p className="text-[10px] text-emerald-600">Adherence</p>
+                <div className="panel-stat text-center">
+                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{p.adherenceRate}%</p>
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-500">Adherence</p>
                 </div>
-                <div className="rounded-xl bg-brand-50 p-3">
-                  <p className="text-lg font-bold text-brand-700">{p.totalMedicines}</p>
-                  <p className="text-[10px] text-brand-600">Medicines</p>
+                <div className="panel-stat text-center">
+                  <p className="text-lg font-bold text-brand-700 dark:text-brand-400">{p.totalMedicines}</p>
+                  <p className="text-[10px] text-brand-600 dark:text-brand-500">Medicines</p>
                 </div>
-                <div className="rounded-xl bg-amber-50 p-3">
-                  <p className="text-lg font-bold text-amber-700">{p.lowStock}</p>
-                  <p className="text-[10px] text-amber-600">Low Stock</p>
+                <div className="panel-stat text-center">
+                  <p className="text-lg font-bold text-amber-700 dark:text-amber-400">{p.lowStock}</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-500">Low Stock</p>
                 </div>
               </div>
               {p.lowStock > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
                   <AlertTriangle className="h-4 w-4" />
                   Some medicines need refilling soon
                 </div>

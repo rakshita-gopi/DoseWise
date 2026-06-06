@@ -12,12 +12,12 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import { ThemeToggle } from './ThemeToggle';
+import { PatientSwitcher, ActivePatientBanner } from './PatientSwitcher';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -33,9 +33,8 @@ const navItems = [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, patients, activePatient, setActivePatient, notifications, logout } = useAuth();
+  const { user, notifications, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
   const unread = notifications.filter((n) => n.status === 'unread').length;
 
@@ -45,15 +44,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-surface-50 dark:bg-surface-950">
+    <div className="flex min-h-screen bg-[rgb(var(--background))]">
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-100 bg-white transition-transform dark:border-slate-800 dark:bg-surface-900 lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200/80 bg-white transition-transform dark:border-slate-800/80 dark:bg-slate-950 lg:static lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-5 dark:border-slate-800">
+        <div className="flex h-16 items-center gap-3 border-b border-slate-200/80 px-5 dark:border-slate-800/80">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
             <Pill className="h-5 w-5" />
           </div>
@@ -76,8 +75,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 cn(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-surface-900 dark:text-slate-400 dark:hover:bg-surface-800 dark:hover:text-slate-100'
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 dark:ring-1 dark:ring-brand-800/50'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100'
                 )
               }
             >
@@ -109,43 +108,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-surface-900/80 lg:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/80 lg:px-8">
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
 
-          {patients.length > 1 && (
-            <div className="relative">
-              <button
-                onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:bg-surface-900 dark:hover:bg-surface-800"
-              >
-                <UserCircle className="h-4 w-4 text-brand-600" />
-                {activePatient?.name || 'Select Profile'}
-                <ChevronDown className="h-4 w-4 text-slate-400" />
-              </button>
-              {profileOpen && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-xl border border-slate-100 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-surface-900">
-                  {patients.map((p) => (
-                    <button
-                      key={p._id}
-                      onClick={() => {
-                        setActivePatient(p);
-                        setProfileOpen(false);
-                      }}
-                      className={cn(
-                        'block w-full px-4 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-surface-800',
-                        activePatient?._id === p._id && 'bg-brand-50 text-brand-700 font-medium dark:bg-brand-950 dark:text-brand-300'
-                      )}
-                    >
-                      {p.name}
-                      <span className="ml-1 text-xs text-slate-400 capitalize">({p.relationship})</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+          <PatientSwitcher />
 
           <div className="ml-auto flex items-center gap-3">
             <ThemeToggle />
@@ -159,7 +127,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8 animate-in fade-in duration-300">{children}</main>
+        <main className="flex-1 p-4 lg:p-8 animate-in fade-in duration-300">
+          <ActivePatientBanner />
+          {children}
+        </main>
       </div>
     </div>
   );

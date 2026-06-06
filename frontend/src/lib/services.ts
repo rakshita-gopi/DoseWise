@@ -55,6 +55,7 @@ export const inventoryApi = {
   dashboard: (patientId: string) => api.get<DashboardData>(`/inventory/patient/${patientId}/dashboard`),
   reminders: (patientId: string) => api.get<DoseLog[]>(`/inventory/patient/${patientId}/reminders`),
   update: (id: string, data: Partial<InventoryItem>) => api.patch<InventoryItem>(`/inventory/${id}`, data),
+  delete: (id: string) => api.delete(`/inventory/${id}`),
 };
 
 export const doseApi = {

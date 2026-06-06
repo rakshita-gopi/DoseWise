@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../lib/services';
 import { Button, Input, Label, Spinner } from '../components/ui';
+import { PasswordInput } from '../components/ui/PasswordInput';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 export function LoginPage() {
@@ -61,7 +62,7 @@ export function LoginPage() {
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
+              <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Enter your password" />
             </div>
           </div>
 
@@ -130,7 +131,7 @@ export function RegisterPage() {
           </div>
           <div>
             <Label>Password</Label>
-            <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+            <PasswordInput value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} placeholder="Create a password" />
           </div>
           <div>
             <Label>Account Type</Label>

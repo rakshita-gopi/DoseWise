@@ -65,6 +65,8 @@ export interface InventoryItem {
   foodType?: string;
   expiryDate?: string;
   exhaustionDate?: string;
+  batchNumber?: string;
+  lowStockThreshold?: number;
   status: 'active' | 'low_stock' | 'out_of_stock' | 'expired';
 }
 

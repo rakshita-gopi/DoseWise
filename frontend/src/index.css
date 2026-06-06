@@ -3,8 +3,32 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
+    --border: 226 232 240;
+    --accent: 236 254 255;
+    --accent-foreground: 8 145 178;
+  }
+
+  .dark {
+    --background: 2 6 23;
+    --foreground: 226 232 240;
+    --card: 15 23 42;
+    --card-foreground: 241 245 249;
+    --muted: 30 41 59;
+    --muted-foreground: 148 163 184;
+    --border: 51 65 85;
+    --accent: 22 78 99;
+    --accent-foreground: 103 232 249;
+  }
+
   body {
-    @apply bg-surface-50 text-surface-900 antialiased dark:bg-surface-950 dark:text-slate-100;
+    @apply bg-[rgb(var(--background))] text-[rgb(var(--foreground))] antialiased;
   }
 }
 
@@ -13,28 +37,78 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-brand-600 text-white hover:bg-brand-700 shadow-sm hover:shadow-md active:scale-[0.98] dark:bg-brand-500 dark:hover:bg-brand-400;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm hover:shadow-md active:scale-[0.98] dark:bg-brand-600 dark:hover:bg-brand-500 dark:shadow-brand-900/20;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white text-surface-800 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 dark:bg-surface-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-surface-800 dark:hover:border-slate-600;
+    @apply btn bg-white text-surface-800 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-700 dark:hover:border-slate-500;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-surface-800;
+    @apply btn text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/80;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-red-500 text-white hover:bg-red-600;
+    @apply btn bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-surface-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-400/20;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-400/20;
   }
   .label {
-    @apply mb-1.5 block text-sm font-medium text-surface-800 dark:text-slate-200;
+    @apply mb-1.5 block text-sm font-medium text-surface-800 dark:text-slate-300;
   }
   .card {
-    @apply rounded-2xl border border-slate-100 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-surface-900 dark:shadow-none;
+    @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition-all duration-300 dark:border-slate-700/60 dark:bg-slate-900/70 dark:shadow-none dark:backdrop-blur-sm;
   }
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* Semantic dark-mode-safe utilities */
+  .page-title {
+    @apply font-display text-2xl font-bold text-slate-900 dark:text-slate-50;
+  }
+  .page-desc {
+    @apply text-sm text-slate-500 dark:text-slate-400;
+  }
+  .section-title {
+    @apply font-display font-semibold text-slate-900 dark:text-slate-100;
+  }
+  .panel {
+    @apply rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-slate-700/50 dark:bg-slate-800/50;
+  }
+  .panel-stat {
+    @apply rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-slate-700/50 dark:bg-slate-800/40;
+  }
+  .list-item {
+    @apply rounded-xl border border-slate-200/80 p-4 transition-colors dark:border-slate-700/50 dark:bg-slate-800/30;
+  }
+  .table-head {
+    @apply border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400;
+  }
+  .table-row {
+    @apply border-b border-slate-100 dark:border-slate-800/80;
+  }
+  .muted {
+    @apply text-slate-500 dark:text-slate-400;
+  }
+  .stat-value {
+    @apply text-lg font-bold text-slate-900 dark:text-slate-100;
+  }
+  .alert-warning {
+    @apply border-amber-200/80 bg-amber-50/60 dark:border-amber-800/50 dark:bg-amber-950/30;
+  }
+  .icon-box {
+    @apply flex h-11 w-11 items-center justify-center rounded-xl;
+  }
+  .icon-box-brand {
+    @apply icon-box text-brand-600 bg-brand-50 dark:bg-brand-900/30 dark:text-brand-400;
+  }
+  .icon-box-emerald {
+    @apply icon-box text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400;
+  }
+  .icon-box-amber {
+    @apply icon-box text-amber-600 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+  .icon-box-violet {
+    @apply icon-box text-violet-600 bg-violet-50 dark:bg-violet-900/30 dark:text-violet-400;
   }
 }
 
