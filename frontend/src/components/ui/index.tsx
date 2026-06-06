@@ -50,7 +50,11 @@ export function Label({ className, children, ...props }: React.LabelHTMLAttribut
 }
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn('card', className)}>{children}</div>;
+  return (
+    <div className={cn('card transition-all duration-300 hover:shadow-md dark:hover:shadow-brand-900/10', className)}>
+      {children}
+    </div>
+  );
 }
 
 export function Badge({ status }: { status: string }) {

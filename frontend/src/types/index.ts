@@ -40,6 +40,7 @@ export interface Medicine {
 export interface Prescription {
   _id: string;
   patientId: string;
+  title?: string;
   doctorName?: string;
   hospital?: string;
   prescribedDate?: string;

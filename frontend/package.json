@@ -9,16 +9,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.16",
+    "@radix-ui/react-slot": "^1.2.5",
     "axios": "^1.7.7",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dosewise": "file:..",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^0.454.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.28.0",
     "recharts": "^2.13.3",
-    "socket.io-client": "^4.8.0"
+    "socket.io-client": "^4.8.0",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",

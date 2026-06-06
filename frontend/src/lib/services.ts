@@ -17,8 +17,27 @@ export const patientApi = {
   delete: (id: string) => api.delete(`/patients/${id}`),
 };
 
+export interface ParsedPrescription {
+  doctorName?: string | null;
+  hospital?: string | null;
+  prescribedDate?: string | null;
+  nextReviewDate?: string | null;
+  medicines: Prescription['medicines'];
+}
+
 export const prescriptionApi = {
   list: (patientId: string) => api.get<Prescription[]>(`/prescriptions/patient/${patientId}`),
+  get: (id: string) => api.get<Prescription>(`/prescriptions/${id}`),
+  parse: (formData: FormData) =>
+    api.post<{ extracted: ParsedPrescription; interactions: unknown; uploadedFile?: string; source: string }>(
+      '/prescriptions/parse',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    ),
+  save: (data: Record<string, unknown>) =>
+    api.post<{ prescription: Prescription; interactions: unknown }>('/prescriptions/save', data),
+  update: (id: string, data: Record<string, unknown>) => api.put<Prescription>(`/prescriptions/${id}`, data),
+  delete: (id: string) => api.delete(`/prescriptions/${id}`),
   upload: (formData: FormData) =>
     api.post<{ prescription: Prescription; interactions: unknown }>('/prescriptions/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

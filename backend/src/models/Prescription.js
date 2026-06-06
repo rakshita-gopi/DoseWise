@@ -14,6 +14,7 @@ const medicineSchema = new mongoose.Schema({
 const prescriptionSchema = new mongoose.Schema(
   {
     patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
+    title: { type: String, trim: true },
     doctorName: String,
     hospital: String,
     prescribedDate: Date,

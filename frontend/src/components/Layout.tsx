@@ -159,7 +159,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 lg:p-8 animate-in fade-in duration-300">{children}</main>
       </div>
     </div>
   );

@@ -43,25 +43,46 @@ export async function parsePrescription(textOrDescription) {
   return validatePrescriptionResult(parseJsonFromAI(content));
 }
 
-export async function parsePrescriptionFromImage(imageBase64, mimeType, supplementalText) {
-  const hint = supplementalText ? `\n\nAdditional text extracted:\n${supplementalText}` : '';
+export async function parsePrescriptionFromImages(images, supplementalText) {
+  const hint = supplementalText ? `\n\nAdditional text extracted from document:\n${supplementalText}` : '';
+  const pageNote = images.length > 1 ? ` This prescription has ${images.length} pages — read ALL pages.` : '';
+
   const content = await callOpenRouterVision(
     PRESCRIPTION_PROMPT,
-    `Read this prescription document image carefully. Extract all medicines, dosages, doctor name, hospital, and dates.${hint}\n\nReturn structured JSON only.`,
-    imageBase64,
-    mimeType
+    `Read this prescription document carefully. Extract ALL medicines, dosages, doctor name, hospital, and dates.${pageNote}${hint}\n\nReturn structured JSON only.`,
+    images
   );
 
   return validatePrescriptionResult(parseJsonFromAI(content));
 }
 
-export async function parsePrescriptionInput({ text, imageBase64, mimeType }) {
-  if (imageBase64) {
-    return parsePrescriptionFromImage(imageBase64, mimeType, text);
+export async function parsePrescriptionInput({ text, images, imageBase64, mimeType }) {
+  const imageList =
+    images?.length > 0
+      ? images
+      : imageBase64
+        ? [{ base64: imageBase64, mimeType: mimeType || 'image/png' }]
+        : [];
+
+  if (imageList.length > 0) {
+    try {
+      return await parsePrescriptionFromImages(imageList, text);
+    } catch (visionErr) {
+      if (text?.trim()) {
+        try {
+          return await parsePrescription(text);
+        } catch {
+          throw visionErr;
+        }
+      }
+      throw visionErr;
+    }
   }
+
   if (text?.trim()) {
-    return parsePrescription(text);
+    return await parsePrescription(text);
   }
+
   throw new Error('No prescription content to parse');
 }
 
@@ -103,25 +124,44 @@ export async function parseBill(textOrDescription) {
   return validateBillResult(parseJsonFromAI(content));
 }
 
-export async function parseBillFromImage(imageBase64, mimeType, supplementalText) {
+export async function parseBillFromImages(images, supplementalText) {
   const hint = supplementalText ? `\n\nAdditional text extracted:\n${supplementalText}` : '';
   const content = await callOpenRouterVision(
     BILL_PROMPT,
-    `Read this pharmacy bill image carefully. Extract all medicine items, quantities, pharmacy name, and dates.${hint}\n\nReturn structured JSON only.`,
-    imageBase64,
-    mimeType
+    `Read this pharmacy bill carefully. Extract all medicine items, quantities, pharmacy name, and dates.${hint}\n\nReturn structured JSON only.`,
+    images
   );
 
   return validateBillResult(parseJsonFromAI(content));
 }
 
-export async function parseBillInput({ text, imageBase64, mimeType }) {
-  if (imageBase64) {
-    return parseBillFromImage(imageBase64, mimeType, text);
+export async function parseBillInput({ text, images, imageBase64, mimeType }) {
+  const imageList =
+    images?.length > 0
+      ? images
+      : imageBase64
+        ? [{ base64: imageBase64, mimeType: mimeType || 'image/png' }]
+        : [];
+
+  if (imageList.length > 0) {
+    try {
+      return await parseBillFromImages(imageList, text);
+    } catch (visionErr) {
+      if (text?.trim()) {
+        try {
+          return await parseBill(text);
+        } catch {
+          throw visionErr;
+        }
+      }
+      throw visionErr;
+    }
   }
+
   if (text?.trim()) {
-    return parseBill(text);
+    return await parseBill(text);
   }
+
   throw new Error('No bill content to parse');
 }
 

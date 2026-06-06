@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Pill, AlertTriangle, TrendingUp, CheckCircle2, Plus, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
@@ -51,7 +52,7 @@ export function DashboardPage() {
   }));
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-slate-500">{getGreeting()}, {user?.name?.split(' ')[0]}</p>
@@ -76,8 +77,14 @@ export function DashboardPage() {
           { label: 'Active', value: data.summary.activeMedicines, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50' },
           { label: 'Low Stock', value: data.summary.lowStockCount, icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
           { label: 'Adherence', value: `${data.summary.adherenceRate}%`, icon: TrendingUp, color: 'text-violet-600 bg-violet-50' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <Card key={label} className="flex items-center gap-4">
+        ].map(({ label, value, icon: Icon, color }, i) => (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08, duration: 0.35 }}
+          >
+          <Card className="flex items-center gap-4">
             <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${color}`}>
               <Icon className="h-5 w-5" />
             </div>
@@ -86,6 +93,7 @@ export function DashboardPage() {
               <p className="text-xs text-slate-500">{label}</p>
             </div>
           </Card>
+          </motion.div>
         ))}
       </div>
 

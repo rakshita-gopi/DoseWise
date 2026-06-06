@@ -2,47 +2,66 @@ import fs from 'fs';
 import path from 'path';
 import { PDFParse } from 'pdf-parse';
 
-const MIN_TEXT_LENGTH = 25;
-
 function readFileBuffer(filePath) {
   return fs.readFileSync(filePath);
 }
 
-async function extractPdfText(buffer) {
+async function withPdfParser(buffer, fn) {
   const parser = new PDFParse({ data: buffer });
   try {
-    const result = await parser.getText();
-    return result.text?.replace(/\s+/g, ' ').trim() || '';
+    return await fn(parser);
   } finally {
     await parser.destroy();
   }
 }
 
-async function pdfFirstPageToBase64(buffer) {
-  const parser = new PDFParse({ data: buffer });
-  try {
+async function extractPdfText(buffer) {
+  return withPdfParser(buffer, async (parser) => {
+    const result = await parser.getText();
+    return result.text?.replace(/\s+/g, ' ').trim() || '';
+  });
+}
+
+async function pdfPagesToImages(buffer, maxPages = 3) {
+  return withPdfParser(buffer, async (parser) => {
+    let totalPages = 1;
+    try {
+      const info = await parser.getInfo({ parsePageInfo: true });
+      totalPages = info?.total || info?.pages?.length || 1;
+    } catch {
+      totalPages = 1;
+    }
+
+    const pageCount = Math.min(Math.max(totalPages, 1), maxPages);
+    const partial = Array.from({ length: pageCount }, (_, i) => i + 1);
+
     const result = await parser.getScreenshot({
-      partial: [1],
-      scale: 2,
+      partial,
+      scale: 2.5,
       imageBuffer: true,
       imageDataUrl: false,
     });
 
-    const pageData = result.pages?.[0]?.data;
-    if (!pageData) {
-      throw new Error('Could not render PDF page for OCR');
+    const images = (result.pages || [])
+      .map((page) => {
+        const data = page?.data;
+        if (!data) return null;
+        const pngBuffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
+        return { base64: pngBuffer.toString('base64'), mimeType: 'image/png' };
+      })
+      .filter(Boolean);
+
+    if (!images.length) {
+      throw new Error('Could not render PDF pages for OCR');
     }
 
-    const pngBuffer = Buffer.isBuffer(pageData) ? pageData : Buffer.from(pageData);
-    return pngBuffer.toString('base64');
-  } finally {
-    await parser.destroy();
-  }
+    return images;
+  });
 }
 
 export async function extractContentFromUploadedFile(file) {
   if (!file?.path) {
-    return { text: null, imageBase64: null, mimeType: null };
+    return { text: null, images: [], mimeType: null };
   }
 
   const buffer = readFileBuffer(file.path);
@@ -59,14 +78,12 @@ export async function extractContentFromUploadedFile(file) {
       text = '';
     }
 
-    if (text.length >= MIN_TEXT_LENGTH) {
-      return { text, imageBase64: null, mimeType: 'application/pdf', source: 'pdf-text' };
-    }
+    const images = await pdfPagesToImages(buffer, 3);
 
-    const imageBase64 = await pdfFirstPageToBase64(buffer);
     return {
       text: text || null,
-      imageBase64,
+      images,
+      imageBase64: images[0]?.base64 || null,
       mimeType: 'image/png',
       source: 'pdf-vision',
     };
@@ -74,9 +91,11 @@ export async function extractContentFromUploadedFile(file) {
 
   if (isImage) {
     const resolvedMime = mimeType.startsWith('image/') ? mimeType : 'image/jpeg';
+    const base64 = buffer.toString('base64');
     return {
       text: null,
-      imageBase64: buffer.toString('base64'),
+      images: [{ base64, mimeType: resolvedMime }],
+      imageBase64: base64,
       mimeType: resolvedMime,
       source: 'image-vision',
     };
@@ -92,6 +111,7 @@ export async function resolveUploadInput({ rawText, manualEntry, file }) {
     const extracted = await extractContentFromUploadedFile(file);
     return {
       text: typedText || extracted.text,
+      images: extracted.images,
       imageBase64: extracted.imageBase64,
       mimeType: extracted.mimeType,
       source: extracted.source,
@@ -99,7 +119,7 @@ export async function resolveUploadInput({ rawText, manualEntry, file }) {
   }
 
   if (typedText) {
-    return { text: typedText, imageBase64: null, mimeType: null, source: 'text' };
+    return { text: typedText, images: [], imageBase64: null, mimeType: null, source: 'text' };
   }
 
   throw new Error('Enter text or upload a PDF/image file');

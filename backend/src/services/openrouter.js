@@ -41,15 +41,21 @@ export function parseJsonFromAI(text) {
   }
 }
 
-export async function callOpenRouterVision(systemPrompt, userText, imageBase64, mimeType, options = {}) {
+export async function callOpenRouterVision(systemPrompt, userText, images, options = {}) {
   const visionModel = options.model || process.env.OPENROUTER_VISION_MODEL || 'openai/gpt-4o-mini';
+
+  const imageList = Array.isArray(images)
+    ? images
+    : images
+      ? [{ base64: images, mimeType: options.mimeType || 'image/png' }]
+      : [];
 
   const userContent = [
     { type: 'text', text: userText },
-    {
+    ...imageList.map((img) => ({
       type: 'image_url',
-      image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-    },
+      image_url: { url: `data:${img.mimeType || 'image/png'};base64,${img.base64}` },
+    })),
   ];
 
   return callOpenRouter(
