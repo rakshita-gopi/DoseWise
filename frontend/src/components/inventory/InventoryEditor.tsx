@@ -15,6 +15,18 @@ export interface InventoryFormData {
   lowStockThreshold: number;
 }
 
+export const emptyInventoryForm = (): InventoryFormData => ({
+  medicineName: '',
+  strength: '',
+  availableQuantity: 0,
+  morning: 0,
+  afternoon: 0,
+  night: 0,
+  expiryDate: '',
+  batchNumber: '',
+  lowStockThreshold: 7,
+});
+
 export function itemToForm(item: InventoryItem): InventoryFormData {
   return {
     medicineName: item.medicineName,
@@ -38,17 +50,20 @@ interface InventoryEditorProps {
   onDelete?: () => void;
   saving?: boolean;
   deleting?: boolean;
+  mode?: 'create' | 'edit';
 }
 
-export function InventoryEditor({ open, onOpenChange, data, onChange, onSave, onDelete, saving, deleting }: InventoryEditorProps) {
+export function InventoryEditor({ open, onOpenChange, data, onChange, onSave, onDelete, saving, deleting, mode = 'edit' }: InventoryEditorProps) {
   const daily = data.morning + data.afternoon + data.night;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Medicine</DialogTitle>
-          <DialogDescription>Update stock, dosage schedule, and expiry details.</DialogDescription>
+          <DialogTitle>{mode === 'create' ? 'Add New Medicine' : 'Edit Medicine'}</DialogTitle>
+          <DialogDescription>
+            {mode === 'create' ? 'Manually add a medicine to the inventory.' : 'Update stock, dosage schedule, and expiry details.'}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -113,7 +128,7 @@ export function InventoryEditor({ open, onOpenChange, data, onChange, onSave, on
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button onClick={onSave} disabled={saving || deleting || !data.medicineName.trim()}>
-                {saving ? <Spinner /> : <><Save className="h-4 w-4" /> Save Changes</>}
+                {saving ? <Spinner /> : <><Save className="h-4 w-4" /> {mode === 'create' ? 'Add Medicine' : 'Save Changes'}</>}
               </Button>
             </div>
           </div>

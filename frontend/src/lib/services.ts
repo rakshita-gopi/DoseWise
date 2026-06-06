@@ -48,10 +48,12 @@ export const purchaseApi = {
   list: (patientId: string) => api.get<Purchase[]>(`/purchases/patient/${patientId}`),
   upload: (formData: FormData) =>
     api.post('/purchases/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id: string) => api.delete(`/purchases/${id}`),
 };
 
 export const inventoryApi = {
   list: (patientId: string) => api.get<InventoryItem[]>(`/inventory/patient/${patientId}`),
+  create: (data: Record<string, unknown>) => api.post<InventoryItem>('/inventory', data),
   dashboard: (patientId: string) => api.get<DashboardData>(`/inventory/patient/${patientId}/dashboard`),
   reminders: (patientId: string) => api.get<DoseLog[]>(`/inventory/patient/${patientId}/reminders`),
   update: (id: string, data: Partial<InventoryItem>) => api.patch<InventoryItem>(`/inventory/${id}`, data),

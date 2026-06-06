@@ -38,6 +38,55 @@ router.get('/patient/:patientId/dashboard', async (req, res) => {
   }
 });
 
+router.post('/', async (req, res) => {
+  try {
+    const {
+      patientId,
+      medicineName,
+      strength,
+      availableQuantity,
+      morning,
+      afternoon,
+      night,
+      foodType,
+      batchNumber,
+      expiryDate,
+      lowStockThreshold,
+    } = req.body;
+
+    const patient = await verifyPatientAccess(req.user._id, patientId, req.user.role);
+    if (!patient) return res.status(404).json({ message: 'Patient not found' });
+    if (!medicineName?.trim()) return res.status(400).json({ message: 'Medicine name is required' });
+
+    const dailyUsage = calcDailyUsage(morning ?? 0, afternoon ?? 0, night ?? 0);
+    const qty = availableQuantity ?? 0;
+
+    const item = await Inventory.create({
+      patientId,
+      medicineName: medicineName.trim(),
+      strength,
+      availableQuantity: qty,
+      morning: morning ?? 0,
+      afternoon: afternoon ?? 0,
+      night: night ?? 0,
+      dailyUsage,
+      foodType: foodType || 'any',
+      batchNumber,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+      lowStockThreshold: lowStockThreshold ?? 7,
+      exhaustionDate: calcExhaustionDate(qty, dailyUsage),
+      status: getInventoryStatus(qty, dailyUsage, expiryDate, lowStockThreshold ?? 7),
+    });
+
+    const io = req.app.get('io');
+    io?.to(String(req.user._id)).emit('inventory:update', item);
+
+    res.status(201).json(item);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get('/:id/refill-prediction', async (req, res) => {
   try {
     const item = await Inventory.findById(req.params.id);

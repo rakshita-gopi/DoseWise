@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pill, Upload, Sparkles, Pencil, Trash2 } from 'lucide-react';
+import { Pill, Upload, Sparkles, Pencil, Trash2, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import { inventoryApi, purchaseApi } from '../lib/services';
 import type { InventoryItem, Purchase } from '../types';
 import { Card, Badge, Button, Textarea, Spinner, EmptyState } from '../components/ui';
 import { PageHeader } from '../components/ui/PageHeader';
-import { InventoryEditor, itemToForm, type InventoryFormData } from '../components/inventory/InventoryEditor';
+import { InventoryEditor, itemToForm, emptyInventoryForm, type InventoryFormData } from '../components/inventory/InventoryEditor';
 import { formatDate, daysRemaining } from '../lib/utils';
 
 export function InventoryPage() {
@@ -22,6 +22,7 @@ export function InventoryPage() {
   }));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('edit');
 
   const load = () => {
     if (!activePatient) return;
@@ -31,8 +32,16 @@ export function InventoryPage() {
   useEffect(load, [activePatient]);
 
   const openEdit = (item: InventoryItem) => {
+    setEditorMode('edit');
     setEditingId(item._id);
     setFormData(itemToForm(item));
+    setEditorOpen(true);
+  };
+
+  const openCreate = () => {
+    setEditorMode('create');
+    setEditingId(null);
+    setFormData(emptyInventoryForm());
     setEditorOpen(true);
   };
 
@@ -66,18 +75,29 @@ export function InventoryPage() {
   };
 
   const handleSave = async () => {
-    if (!editingId || !formData.medicineName.trim()) return;
+    if (!activePatient || !formData.medicineName.trim()) return;
     setSaving(true);
+    const payload = {
+      ...formData,
+      expiryDate: formData.expiryDate || undefined,
+    };
+
     try {
-      const { data } = await inventoryApi.update(editingId, {
-        ...formData,
-        expiryDate: formData.expiryDate || undefined,
-      });
-      setInventory((prev) => prev.map((i) => (i._id === editingId ? data : i)));
-      toast.success('Medicine updated!');
+      if (editorMode === 'create') {
+        const { data } = await inventoryApi.create({
+          patientId: activePatient._id,
+          ...payload,
+        });
+        setInventory((prev) => [...prev, data].sort((a, b) => a.medicineName.localeCompare(b.medicineName)));
+        toast.success('Medicine added to inventory!');
+      } else if (editingId) {
+        const { data } = await inventoryApi.update(editingId, payload);
+        setInventory((prev) => prev.map((i) => (i._id === editingId ? data : i)));
+        toast.success('Medicine updated!');
+      }
       setEditorOpen(false);
     } catch {
-      toast.error('Failed to update medicine');
+      toast.error(editorMode === 'create' ? 'Failed to add medicine' : 'Failed to update medicine');
     } finally {
       setSaving(false);
     }
@@ -87,12 +107,20 @@ export function InventoryPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 space-y-6 duration-500">
-      <PageHeader title="Medicine Inventory" description="Auto-tracked stock with daily consumption" />
+      <PageHeader
+        title="Medicine Inventory"
+        description="Auto-tracked stock with daily consumption"
+        action={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Add Medicine
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-12"><Spinner className="h-8 w-8" /></div>
       ) : inventory.length === 0 ? (
-        <EmptyState icon={<Pill />} title="No medicines in inventory" description="Upload a prescription and bill to start tracking" />
+        <EmptyState icon={<Pill />} title="No medicines in inventory" description="Add a medicine manually or upload a prescription and bill" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {inventory.map((item, i) => {
@@ -172,9 +200,10 @@ export function InventoryPage() {
         data={formData}
         onChange={setFormData}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={editorMode === 'edit' ? handleDelete : undefined}
         saving={saving}
         deleting={deleting}
+        mode={editorMode}
       />
     </div>
   );
@@ -254,13 +283,33 @@ export function PurchasesPage() {
         <EmptyState icon={<Upload />} title="No purchases recorded" />
       ) : (
         purchases.map((p) => (
-          <Card key={p._id}>
-            <div className="mb-3 flex justify-between">
+          <Card key={p._id} className="group">
+            <div className="mb-3 flex justify-between gap-3">
               <div>
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">{p.pharmacy || 'Pharmacy'}</h3>
                 <p className="muted text-xs">{formatDate(p.purchaseDate)}</p>
               </div>
-              {p.totalAmount && <p className="font-bold text-brand-600 dark:text-brand-400">₹{p.totalAmount}</p>}
+              <div className="flex items-start gap-2">
+                {p.totalAmount != null && (
+                  <p className="font-bold text-brand-600 dark:text-brand-400">₹{p.totalAmount}</p>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Delete this purchase record from ${p.pharmacy || 'pharmacy'}?`)) return;
+                    try {
+                      await purchaseApi.delete(p._id);
+                      setPurchases((prev) => prev.filter((x) => x._id !== p._id));
+                      toast.success('Purchase deleted');
+                    } catch {
+                      toast.error('Failed to delete purchase');
+                    }
+                  }}
+                  className="rounded-lg p-1.5 text-slate-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                  title="Delete purchase"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div className="space-y-1 text-sm">
               {p.items.map((item, i) => (
