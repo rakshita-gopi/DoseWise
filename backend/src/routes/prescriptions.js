@@ -7,6 +7,7 @@ import { verifyPatientAccess } from '../utils/patientAccess.js';
 import { parsePrescriptionInput, checkDrugInteractions } from '../services/aiService.js';
 import { resolveUploadInput } from '../services/fileExtractionService.js';
 import { syncInventoryFromPrescription } from '../services/inventoryService.js';
+import { persistUploadedFile } from '../services/storageService.js';
 import Notification from '../models/Notification.js';
 
 const router = express.Router();
@@ -46,10 +47,12 @@ router.post('/parse', upload.single('file'), async (req, res) => {
     const newMeds = extracted.medicines.map((m) => m.medicineName);
     const interactions = await checkDrugInteractions(existingMeds, newMeds);
 
+    const uploadedFile = req.file ? await persistUploadedFile(req.file) : undefined;
+
     res.json({
       extracted,
       interactions,
-      uploadedFile: req.file ? `/uploads/${req.file.filename}` : undefined,
+      uploadedFile,
       source: input.source,
     });
   } catch (err) {
@@ -148,6 +151,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    const uploadedFile = req.file ? await persistUploadedFile(req.file) : undefined;
+
     const prescription = await Prescription.create({
       patientId,
       title: title?.trim() || `Prescription — ${new Date().toLocaleDateString('en-IN')}`,
@@ -155,7 +160,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       hospital: extracted.hospital,
       prescribedDate: extracted.prescribedDate ? new Date(extracted.prescribedDate) : new Date(),
       nextReviewDate: extracted.nextReviewDate ? new Date(extracted.nextReviewDate) : undefined,
-      uploadedFile: req.file ? `/uploads/${req.file.filename}` : undefined,
+      uploadedFile,
       rawText: textInput,
       medicines: extracted.medicines,
       status: 'processed',

@@ -6,6 +6,7 @@ import { verifyPatientAccess } from '../utils/patientAccess.js';
 import { parseBillInput } from '../services/aiService.js';
 import { resolveUploadInput } from '../services/fileExtractionService.js';
 import { updateInventoryFromPurchase } from '../services/inventoryService.js';
+import { persistUploadedFile } from '../services/storageService.js';
 
 const router = express.Router();
 router.use(auth);
@@ -39,9 +40,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(422).json({ message: `AI parsing failed: ${aiErr.message}` });
     }
 
+    const billFile = req.file ? await persistUploadedFile(req.file) : undefined;
+
     const purchase = await Purchase.create({
       patientId,
-      billFile: req.file ? `/uploads/${req.file.filename}` : undefined,
+      billFile,
       pharmacy: extracted.pharmacy,
       purchaseDate: extracted.purchaseDate ? new Date(extracted.purchaseDate) : new Date(),
       items: extracted.items,

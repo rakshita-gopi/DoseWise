@@ -3,6 +3,7 @@ import { FolderOpen, Upload, Trash2, FileText, Image } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { documentApi } from '../lib/services';
+import { assetUrl } from '../lib/api';
 import type { Document } from '../types';
 import { Card, Button, Input, Label, Select, Spinner, EmptyState } from '../components/ui';
 import { formatDate } from '../lib/utils';
@@ -120,7 +121,7 @@ export function DocumentsPage() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              <a href={doc.filePath} target="_blank" rel="noopener noreferrer" className="mt-3 block text-xs font-medium text-brand-600 hover:underline">
+              <a href={assetUrl(doc.filePath)} target="_blank" rel="noopener noreferrer" className="mt-3 block text-xs font-medium text-brand-600 hover:underline">
                 View Document →
               </a>
             </Card>

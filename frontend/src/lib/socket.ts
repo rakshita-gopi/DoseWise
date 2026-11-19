@@ -11,8 +11,11 @@ export function connectSocket(userId: string, callbacks?: {
 }) {
   if (socket?.connected) return socket;
 
-  socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+  const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+
+  socket = io(apiUrl, {
     transports: ['websocket', 'polling'],
+    withCredentials: true,
   });
 
   socket.on('connect', () => {

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const rawBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const apiBaseURL = rawBase ? `${rawBase}/api` : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseURL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -24,5 +27,13 @@ api.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+/** Resolve uploaded asset paths against the API host in production. */
+export function assetUrl(path?: string | null): string {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return rawBase ? `${rawBase}${normalized}` : normalized;
+}
 
 export default api;

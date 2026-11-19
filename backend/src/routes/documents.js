@@ -3,6 +3,7 @@ import Document from '../models/Document.js';
 import { auth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 import { verifyPatientAccess } from '../utils/patientAccess.js';
+import { persistUploadedFile } from '../services/storageService.js';
 
 const router = express.Router();
 router.use(auth);
@@ -27,11 +28,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const patient = await verifyPatientAccess(req.user._id, patientId, req.user.role);
     if (!patient) return res.status(404).json({ message: 'Patient not found' });
 
+    const filePath = await persistUploadedFile(req.file);
+
     const doc = await Document.create({
       patientId,
       title: title || req.file.originalname,
       category: category || 'other',
-      filePath: `/uploads/${req.file.filename}`,
+      filePath,
       fileType: req.file.mimetype,
       fileSize: req.file.size,
       notes,

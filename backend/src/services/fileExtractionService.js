@@ -59,12 +59,17 @@ async function pdfPagesToImages(buffer, maxPages = 3) {
   });
 }
 
+function getUploadBuffer(file) {
+  if (file.buffer) return file.buffer;
+  if (file.path) return readFileBuffer(file.path);
+  return null;
+}
+
 export async function extractContentFromUploadedFile(file) {
-  if (!file?.path) {
+  const buffer = getUploadBuffer(file);
+  if (!buffer) {
     return { text: null, images: [], mimeType: null };
   }
-
-  const buffer = readFileBuffer(file.path);
   const mimeType = file.mimetype || '';
   const ext = path.extname(file.originalname || file.filename || '').toLowerCase();
   const isPdf = mimeType === 'application/pdf' || ext === '.pdf';
